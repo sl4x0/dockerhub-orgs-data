@@ -33,10 +33,10 @@ def extract_company_name(url: str) -> str:
     """Extract company/program name from URL"""
     # Remove protocol and common domains
     clean_url = url.lower().replace('https://', '').replace('http://', '')
-    
+
     # Extract path parts
     parts = clean_url.split('/')
-    
+
     for part in parts:
         if part and part not in ['hackerone.com', 'bugcrowd.com', 'app.intigriti.com',
                                    'yeswehack.com', 'federacy.com', 'hackenproof.com',
@@ -45,17 +45,17 @@ def extract_company_name(url: str) -> str:
             clean = re.sub(r'[^a-z0-9-_]', '', part)
             if len(clean) >= 2:
                 return clean
-    
+
     return ""
 
 
 def google_search_dockerhub(company_name: str) -> Set[str]:
     """Search Google for DockerHub profiles using dorks"""
     found_usernames = set()
-    
+
     if not company_name or len(company_name) < 2:
         return found_usernames
-    
+
     # Multiple search strategies
     search_queries = [
         f'"{company_name}" site:hub.docker.com',
@@ -63,32 +63,32 @@ def google_search_dockerhub(company_name: str) -> Set[str]:
         f'{company_name} site:hub.docker.com/u/',
         f'{company_name} site:hub.docker.com/r/',
     ]
-    
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    
+
     for query in search_queries:
         try:
             # Encode query for URL
             encoded_query = urllib.parse.quote_plus(query)
             search_url = f"https://www.google.com/search?q={encoded_query}&num=10"
-            
+
             req = urllib.request.Request(search_url, headers=headers)
-            
+
             # Add delay to avoid rate limiting
             time.sleep(2)
-            
+
             with urllib.request.urlopen(req, timeout=10) as response:
                 html = response.read().decode('utf-8', errors='ignore')
-                
+
                 # Extract DockerHub usernames from search results
                 # Pattern: hub.docker.com/u/USERNAME or hub.docker.com/r/USERNAME
                 patterns = [
                     r'hub\.docker\.com/u/([a-z0-9][a-z0-9_-]{1,}[a-z0-9])',
                     r'hub\.docker\.com/r/([a-z0-9][a-z0-9_-]{1,}[a-z0-9])',
                 ]
-                
+
                 for pattern in patterns:
                     matches = re.findall(pattern, html, re.IGNORECASE)
                     for match in matches:
@@ -96,15 +96,15 @@ def google_search_dockerhub(company_name: str) -> Set[str]:
                         # Filter out common false positives
                         if username not in ['library', 'search', '_', 'explore']:
                             found_usernames.add(username)
-                
+
                 # Limit to avoid too many results
                 if len(found_usernames) >= 5:
                     break
-                    
+
         except Exception as e:
             print(f"    ⚠️  Google search error: {str(e)[:50]}")
             continue
-    
+
     return found_usernames
 
 
@@ -127,7 +127,7 @@ def extract_potential_usernames(url: str) -> List[str]:
                 variations.append(clean.replace('-', ''))  # No hyphens
                 variations.append(clean.replace('_', ''))  # No underscores
                 variations.append(clean.replace('-', '').replace('_', ''))  # No separators
-                
+
                 # Company/org name variations
                 if '-' in clean:
                     variations.append(clean.split('-')[0])  # First part
@@ -135,7 +135,7 @@ def extract_potential_usernames(url: str) -> List[str]:
                 if '_' in clean:
                     variations.append(clean.split('_')[0])
                     variations.append(clean.split('_')[-1])
-                
+
                 # Common suffixes (less priority)
                 variations.append(f"{clean}hq")
                 variations.append(f"{clean}inc")
@@ -156,14 +156,14 @@ def extract_potential_usernames(url: str) -> List[str]:
 def discover_dockerhub_for_program(program_url: str) -> str:
     """Try to discover DockerHub username for a program using Google search + fallback"""
     print(f"\n🔍 Searching for: {program_url}")
-    
+
     company_name = extract_company_name(program_url)
     print(f"  📌 Company name: {company_name}")
-    
+
     # Strategy 1: Google Search (Most reliable)
     print(f"  🌐 Searching Google with dorks...")
     google_results = google_search_dockerhub(company_name)
-    
+
     if google_results:
         print(f"  📋 Google found {len(google_results)} potential usernames")
         for username in google_results:
@@ -176,14 +176,14 @@ def discover_dockerhub_for_program(program_url: str) -> str:
             time.sleep(1)
     else:
         print(f"  ⚠️  Google found no results")
-    
+
     # Strategy 2: Smart variations (Fallback)
     print(f"  🔧 Trying smart variations...")
     variations = extract_potential_usernames(program_url)
-    
+
     for variant in variations[:8]:  # Test top 8 variations
         print(f"    Trying: {variant}...", end=' ')
-        
+
         if check_dockerhub_user(variant):
             print("✅ FOUND!")
             time.sleep(1)
@@ -201,7 +201,7 @@ def load_programs_to_discover(data_dir: Path, max_count: int) -> List[Tuple[Path
     programs = []
 
     tsv_files = sorted(data_dir.glob("*.tsv"))
-    
+
     if not tsv_files:
         print(f"⚠️  No TSV files found in {data_dir}")
         return programs
@@ -213,13 +213,13 @@ def load_programs_to_discover(data_dir: Path, max_count: int) -> List[Tuple[Path
                     line = line.strip()
                     if not line:
                         continue
-                    
+
                     # Check if line ends with '?' (needs discovery)
                     if '\t?' in line or line.endswith('\t?'):
                         parts = line.split('\t')
                         if len(parts) == 2 and parts[1] == '?':
                             programs.append((tsv_file, parts[0]))
-                            
+
                             if len(programs) >= max_count:
                                 return programs
         except Exception as e:
@@ -265,7 +265,7 @@ def main():
             print(f"⚠️  Invalid max_count argument, using default: {max_count}")
 
     data_dir = Path(__file__).parent.parent / "dockerhub-orgs-data"
-    
+
     if not data_dir.exists():
         print(f"❌ Error: Data directory not found: {data_dir}")
         return 1
@@ -292,12 +292,12 @@ def main():
     # Track discoveries by file
     discoveries = {}
     found_count = 0
-    
+
     start_time = time.time()
 
     for idx, (tsv_file, program_url) in enumerate(programs, 1):
         print(f"\n[{idx}/{len(programs)}] " + "=" * 60)
-        
+
         try:
             dockerhub_url = discover_dockerhub_for_program(program_url)
 
@@ -339,7 +339,7 @@ def main():
                     platform = Path(file_path).stem
                     for program, dockerhub in updates.items():
                         f.write(f"- **{platform}**: {program} → {dockerhub}\n")
-        
+
         print(f"📄 Summary written to: {summary_file}")
     except Exception as e:
         print(f"⚠️  Could not write summary: {e}")

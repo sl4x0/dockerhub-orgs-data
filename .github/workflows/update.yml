@@ -5,12 +5,10 @@ on:
     # Run daily at 02:00 UTC (after bounty-targets-data updates)
     - cron: "0 2 * * *"
   workflow_dispatch: # Allow manual trigger
-    inputs:
-      auto_discover:
-        description: "Auto-discover DockerHub usernames"
-        required: false
-        type: boolean
-        default: false
+
+permissions:
+  contents: write
+  issues: write
 
 jobs:
   update:
@@ -29,10 +27,13 @@ jobs:
 
       - name: Fetch and update programs
         run: |
-          echo "Fetching bug bounty programs from ALL sources..."
+          echo "🔄 Fetching bug bounty programs from ALL sources..."
           python3 actions/fetch_all_programs.py
+          echo "✅ Programs fetched successfully"
+
+      - name: Verify existing DockerHub organizations
         run: |
-          echo "Verifying existing DockerHub organizations..."
+          echo "🔍 Verifying existing DockerHub organizations..."
 
           if [ -f scripts/all-dockerhub-orgs.sh ]; then
             chmod +x scripts/all-dockerhub-orgs.sh
@@ -53,10 +54,13 @@ jobs:
               fi
             done
           fi
+          echo "✅ Verification complete"
 
       - name: Generate statistics
         run: |
+          echo "📊 Generating statistics..."
           python3 actions/generate_stats.py
+          echo "✅ Statistics generated"
 
       - name: Commit changes
         run: |
@@ -67,10 +71,20 @@ jobs:
           git add docs/STATISTICS.md
 
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "✅ No changes to commit"
           else
-            git commit -m "Update programs and statistics ($(date -u +%Y-%m-%d))"
+            # Count new programs
+            new_programs=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+http" || echo "0")
+
+            git commit -m "📅 Daily update: Fetch latest bug bounty programs
+
+- Date: $(date -u +%Y-%m-%d)
+- New programs: $new_programs
+- Stats updated
+- Auto-sync via GitHub Actions"
+
             git push
+            echo "✅ Changes pushed successfully"
           fi
 
       - name: Create issue for missing organizations

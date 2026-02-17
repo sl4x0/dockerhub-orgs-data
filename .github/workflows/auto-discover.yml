@@ -2,18 +2,22 @@ name: Auto-Discover DockerHub Organizations
 
 on:
   schedule:
-    # Run weekly on Saturdays at 04:00 UTC
+    # Run weekly on Saturdays at 04:00 UTC (discovers 100 programs per week)
     - cron: "0 4 * * 6"
   workflow_dispatch:
     inputs:
       max_discoveries:
-        description: "Maximum number of programs to auto-discover"
+        description: "Maximum number of programs to auto-discover (use 2000+ for initial bulk discovery)"
         required: false
-        default: "50"
+        default: "100"
+
+permissions:
+  contents: write
 
 jobs:
   auto-discover:
     runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours max for large discoveries
 
     steps:
       - name: Checkout code
@@ -28,35 +32,62 @@ jobs:
 
       - name: Auto-discover DockerHub usernames
         run: |
-          echo "Auto-discovering DockerHub usernames for programs marked with '?'"
-          python3 actions/auto_discover.py ${{ github.event.inputs.max_discoveries || 50 }}
+          echo "🐳 Auto-discovering DockerHub usernames for programs marked with '?'"
+          echo "📊 Max discoveries: ${{ github.event.inputs.max_discoveries || 100 }}"
+          python3 actions/auto_discover.py ${{ github.event.inputs.max_discoveries || 100 }}
+        continue-on-error: false
 
       - name: Generate statistics
         run: |
           python3 actions/generate_stats.py
+        continue-on-error: true
 
       - name: Commit discoveries
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
+          # Add all changed TSV files and stats
           git add dockerhub-orgs-data/*.tsv
           git add docs/STATISTICS.md
 
+          # Add discovery log if it exists
+          if [ -f discovery_log.txt ]; then
+            git add discovery_log.txt
+          fi
+
+          # Check if there are changes to commit
           if git diff --staged --quiet; then
-            echo "No new discoveries to commit"
+            echo "✅ No new discoveries to commit"
+            echo "no_changes=true" >> $GITHUB_ENV
           else
-            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+.*hub.docker.com" || true)
-            git commit -m "Auto-discover DockerHub organizations ($discovered found)"
+            # Count discoveries
+            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+.*hub.docker.com" || echo "0")
+
+            echo "📝 Committing $discovered new discoveries"
+            git commit -m "🐳 Auto-discover DockerHub organizations
+
+- Found: $discovered DockerHub usernames
+- Method: Google dorks + smart variations
+- Auto-discovery via GitHub Actions"
+
             git push
+            echo "✅ Changes pushed successfully"
+            echo "no_changes=false" >> $GITHUB_ENV
           fi
 
       - name: Create summary
         run: |
-          echo "## Auto-Discovery Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Auto-Discovery Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ -f discovery_log.txt ]; then
             cat discovery_log.txt >> $GITHUB_STEP_SUMMARY
           else
-            echo "No discoveries made" >> $GITHUB_STEP_SUMMARY
+            echo "No discovery log generated" >> $GITHUB_STEP_SUMMARY
           fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**Next scheduled run**: Saturday 04:00 UTC" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository**: https://github.com/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
