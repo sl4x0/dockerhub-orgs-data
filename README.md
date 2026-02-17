@@ -21,13 +21,23 @@ This repository helps security researchers discover DockerHub organizations asso
 This repository is **fully automated** with GitHub Actions:
 
 - **Daily Updates** (02:00 UTC): Fetches latest bug bounty programs from all platforms
-- **Weekly Auto-Discovery** (Saturdays 04:00 UTC): Automatically discovers DockerHub usernames
+- **Weekly Auto-Discovery** (Saturdays 04:00 UTC): Automatically discovers DockerHub usernames using intelligent Google-based search
 - **Continuous Validation**: Validates data format and checks organization status
 - **Automatic Reports**: Generates statistics and detailed reports
 
+### 🧠 Intelligent Discovery
+
+The auto-discovery system uses a multi-layered approach to find DockerHub organizations:
+
+1. **Google Dorks** - Searches Google with targeted queries like `"company" site:hub.docker.com`
+2. **Smart Variations** - Tests intelligent name variations (with/without hyphens, common suffixes)
+3. **Direct Verification** - Validates each candidate against DockerHub API
+
+This approach is highly effective because companies often use different names on DockerHub than their bug bounty program names. Google helps find these connections that simple pattern matching would miss.
+
 ### Current Stats
 
-- **Total Programs**: 2048+
+- **Total Programs**: 2066+
 - **Mapped DockerHub Organizations**: 16+
 - **Platforms**: HackerOne, Bugcrowd, Intigriti, YesWeHack, Federacy, Chaos (ProjectDiscovery), diodb (disclose.io), and more!
 
