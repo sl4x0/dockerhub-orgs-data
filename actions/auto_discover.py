@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Auto-discover DockerHub usernames for programs marked with '?'
-Uses Google search to find DockerHub profiles intelligently
+Uses smart variations and direct API verification
 """
 
 import sys
@@ -9,9 +9,8 @@ import time
 import urllib.request
 import urllib.parse
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple, Optional
 import re
-import json
 
 
 def check_dockerhub_user(username: str) -> bool:
@@ -47,65 +46,6 @@ def extract_company_name(url: str) -> str:
                 return clean
 
     return ""
-
-
-def google_search_dockerhub(company_name: str) -> Set[str]:
-    """Search Google for DockerHub profiles using dorks"""
-    found_usernames = set()
-
-    if not company_name or len(company_name) < 2:
-        return found_usernames
-
-    # Multiple search strategies
-    search_queries = [
-        f'"{company_name}" site:hub.docker.com',
-        f'{company_name} docker hub',
-        f'{company_name} site:hub.docker.com/u/',
-        f'{company_name} site:hub.docker.com/r/',
-    ]
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-
-    for query in search_queries:
-        try:
-            # Encode query for URL
-            encoded_query = urllib.parse.quote_plus(query)
-            search_url = f"https://www.google.com/search?q={encoded_query}&num=10"
-
-            req = urllib.request.Request(search_url, headers=headers)
-
-            # Add delay to avoid rate limiting
-            time.sleep(2)
-
-            with urllib.request.urlopen(req, timeout=10) as response:
-                html = response.read().decode('utf-8', errors='ignore')
-
-                # Extract DockerHub usernames from search results
-                # Pattern: hub.docker.com/u/USERNAME or hub.docker.com/r/USERNAME
-                patterns = [
-                    r'hub\.docker\.com/u/([a-z0-9][a-z0-9_-]{1,}[a-z0-9])',
-                    r'hub\.docker\.com/r/([a-z0-9][a-z0-9_-]{1,}[a-z0-9])',
-                ]
-
-                for pattern in patterns:
-                    matches = re.findall(pattern, html, re.IGNORECASE)
-                    for match in matches:
-                        username = match.lower()
-                        # Filter out common false positives
-                        if username not in ['library', 'search', '_', 'explore']:
-                            found_usernames.add(username)
-
-                # Limit to avoid too many results
-                if len(found_usernames) >= 5:
-                    break
-
-        except Exception as e:
-            print(f"    ⚠️  Google search error: {str(e)[:50]}")
-            continue
-
-    return found_usernames
 
 
 def extract_potential_usernames(url: str) -> List[str]:
@@ -154,43 +94,26 @@ def extract_potential_usernames(url: str) -> List[str]:
 
 
 def discover_dockerhub_for_program(program_url: str) -> str:
-    """Try to discover DockerHub username for a program using Google search + fallback"""
+    """Try to discover DockerHub username for a program using smart variations"""
     print(f"\n🔍 Searching for: {program_url}")
 
     company_name = extract_company_name(program_url)
     print(f"  📌 Company name: {company_name}")
 
-    # Strategy 1: Google Search (Most reliable)
-    print(f"  🌐 Searching Google with dorks...")
-    google_results = google_search_dockerhub(company_name)
-
-    if google_results:
-        print(f"  📋 Google found {len(google_results)} potential usernames")
-        for username in google_results:
-            print(f"    Verifying: {username}...", end=' ')
-            if check_dockerhub_user(username):
-                print("✅ VERIFIED!")
-                return f"https://hub.docker.com/u/{username}"
-            else:
-                print("❌")
-            time.sleep(1)
-    else:
-        print(f"  ⚠️  Google found no results")
-
-    # Strategy 2: Smart variations (Fallback)
-    print(f"  🔧 Trying smart variations...")
+    # Get smart variations
+    print(f"  🔧 Testing variations...")
     variations = extract_potential_usernames(program_url)
 
-    for variant in variations[:8]:  # Test top 8 variations
-        print(f"    Trying: {variant}...", end=' ')
+    for idx, variant in enumerate(variations[:20], 1):  # Test top 20 variations
+        print(f"    [{idx}/20] {variant}...", end=' ')
 
         if check_dockerhub_user(variant):
             print("✅ FOUND!")
-            time.sleep(1)
+            time.sleep(0.5)
             return f"https://hub.docker.com/u/{variant}"
         else:
             print("❌")
-            time.sleep(0.8)
+            time.sleep(0.3)
 
     print("  ❌ No DockerHub organization found")
     return '?'

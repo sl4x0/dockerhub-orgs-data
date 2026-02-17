@@ -34,6 +34,7 @@ jobs:
         run: |
           echo "🐳 Auto-discovering DockerHub usernames for programs marked with '?'"
           echo "📊 Max discoveries: ${{ github.event.inputs.max_discoveries || 100 }}"
+          echo "🔧 Method: Smart variations + API verification"
           python3 actions/auto_discover.py ${{ github.event.inputs.max_discoveries || 100 }}
         continue-on-error: false
 
