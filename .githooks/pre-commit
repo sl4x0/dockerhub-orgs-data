@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Pre-commit hook to validate data files
+echo "Running pre-commit checks..."
+
+# Check for proper TSV format
+for file in dockerhub-orgs-data/*.tsv; do
+    if [ -f "$file" ]; then
+        echo "Validating $file..."
+        # Check for tabs (TSV format)
+        if grep -q $'\t' "$file"; then
+            echo "✓ $file has valid TSV format"
+        else
+            echo "✗ $file doesn't appear to be tab-separated"
+            exit 1
+        fi
+    fi
+done
+
+echo "Pre-commit checks passed!"
+exit 0

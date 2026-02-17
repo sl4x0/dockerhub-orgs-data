@@ -1,0 +1,62 @@
+name: Auto-Discover DockerHub Organizations
+
+on:
+  schedule:
+    # Run weekly on Saturdays at 04:00 UTC
+    - cron: "0 4 * * 6"
+  workflow_dispatch:
+    inputs:
+      max_discoveries:
+        description: "Maximum number of programs to auto-discover"
+        required: false
+        default: "50"
+
+jobs:
+  auto-discover:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Auto-discover DockerHub usernames
+        run: |
+          echo "Auto-discovering DockerHub usernames for programs marked with '?'"
+          python3 actions/auto_discover.py ${{ github.event.inputs.max_discoveries || 50 }}
+
+      - name: Generate statistics
+        run: |
+          python3 actions/generate_stats.py
+
+      - name: Commit discoveries
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add dockerhub-orgs-data/*.tsv
+          git add docs/STATISTICS.md
+
+          if git diff --staged --quiet; then
+            echo "No new discoveries to commit"
+          else
+            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+.*hub.docker.com" || true)
+            git commit -m "Auto-discover DockerHub organizations ($discovered found)"
+            git push
+          fi
+
+      - name: Create summary
+        run: |
+          echo "## Auto-Discovery Results" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f discovery_log.txt ]; then
+            cat discovery_log.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No discoveries made" >> $GITHUB_STEP_SUMMARY
+          fi

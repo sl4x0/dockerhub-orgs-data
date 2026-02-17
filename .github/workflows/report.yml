@@ -1,0 +1,76 @@
+name: Generate Reports
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "dockerhub-orgs-data/**/*.tsv"
+  schedule:
+    # Run daily at 03:00 UTC (after update workflow)
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate statistics report
+        run: |
+          echo "Generating statistics report..."
+          python3 actions/generate_stats.py
+
+      - name: Generate detailed report
+        run: |
+          mkdir -p docs
+
+          echo "# DockerHub Organizations - Detailed Report" > docs/DETAILED_REPORT.md
+          echo "" >> docs/DETAILED_REPORT.md
+          echo "Last updated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> docs/DETAILED_REPORT.md
+          echo "" >> docs/DETAILED_REPORT.md
+
+          echo "## Programs by Platform" >> docs/DETAILED_REPORT.md
+          echo "" >> docs/DETAILED_REPORT.md
+
+          for file in dockerhub-orgs-data/*.tsv; do
+            if [ -f "$file" ]; then
+              platform=$(basename "$file" .tsv)
+              echo "### $platform" >> docs/DETAILED_REPORT.md
+              echo "" >> docs/DETAILED_REPORT.md
+              echo "| Program | DockerHub Status |" >> docs/DETAILED_REPORT.md
+              echo "|---------|------------------|" >> docs/DETAILED_REPORT.md
+
+              while IFS=$'\t' read -r program dockerhub; do
+                if [ -n "$program" ]; then
+                  echo "| $program | $dockerhub |" >> docs/DETAILED_REPORT.md
+                fi
+              done < "$file"
+
+              echo "" >> docs/DETAILED_REPORT.md
+            fi
+          done
+
+      - name: Commit reports
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add docs/*.md
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update reports ($(date -u +%Y-%m-%d))"
+            git push
+          fi

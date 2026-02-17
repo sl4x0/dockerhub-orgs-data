@@ -1,0 +1,82 @@
+name: Validate Data
+
+on:
+  pull_request:
+    paths:
+      - "dockerhub-orgs-data/**/*.tsv"
+  push:
+    branches:
+      - main
+    paths:
+      - "dockerhub-orgs-data/**/*.tsv"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate TSV format
+        run: |
+          echo "Validating TSV files..."
+
+          # Check for proper tab separation
+          for file in dockerhub-orgs-data/*.tsv; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+
+              # Verify tabs exist
+              if ! grep -q $'\t' "$file"; then
+                echo "ERROR: $file doesn't appear to be tab-separated"
+                exit 1
+              fi
+
+              # Check for trailing whitespace
+              if grep -q '[[:space:]]$' "$file"; then
+                echo "WARNING: $file has trailing whitespace"
+              fi
+
+              echo "✓ $file is valid"
+            fi
+          done
+
+          echo "All TSV files validated successfully!"
+
+      - name: Check DockerHub URLs
+        run: |
+          echo "Validating DockerHub URLs..."
+
+          # Extract DockerHub URLs and verify format
+          for file in dockerhub-orgs-data/*.tsv; do
+            if [ -f "$file" ]; then
+              grep -E "https://hub\.docker\.com/u/" "$file" | while read -r line; do
+                url=$(echo "$line" | grep -oE "https://hub\.docker\.com/u/[^[:space:]]+")
+                if [[ ! "$url" =~ ^https://hub\.docker\.com/u/[a-zA-Z0-9_-]+$ ]]; then
+                  echo "WARNING: Potentially invalid DockerHub URL: $url"
+                fi
+              done
+            fi
+          done
+
+          echo "URL validation complete!"
+
+      - name: Generate statistics
+        run: |
+          echo "## Repository Statistics" >> $GITHUB_STEP_SUMMARY
+
+          total_programs=$(cat dockerhub-orgs-data/*.tsv | wc -l)
+          mapped_orgs=$(grep -E "https://hub\.docker\.com/u/" dockerhub-orgs-data/*.tsv | wc -l)
+          todo_count=$(grep "?" dockerhub-orgs-data/*.tsv | wc -l)
+          not_found=$(grep -E "\t-$" dockerhub-orgs-data/*.tsv | wc -l)
+
+          echo "- **Total Programs**: $total_programs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mapped Organizations**: $mapped_orgs" >> $GITHUB_STEP_SUMMARY
+          echo "- **TODO (needs research)**: $todo_count" >> $GITHUB_STEP_SUMMARY
+          echo "- **Not Found**: $not_found" >> $GITHUB_STEP_SUMMARY
+
+          if [ $mapped_orgs -gt 0 ]; then
+            coverage=$((mapped_orgs * 100 / total_programs))
+            echo "- **Coverage**: ${coverage}%" >> $GITHUB_STEP_SUMMARY
+          fi

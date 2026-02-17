@@ -1,0 +1,15 @@
+# Ensure consistent line endings
+* text=auto
+
+# TSV files
+*.tsv text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Documentation
+*.md text eol=lf
+
+# YAML
+*.yml text eol=lf
+*.yaml text eol=lf
