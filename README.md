@@ -7,6 +7,8 @@
 
 A comprehensive, fully-automated database mapping 2000+ bug bounty programs to their DockerHub organizations/usernames for security research and container analysis.
 
+> **⚠️ CAUTION**: This repository uses automated discovery and data aggregation. While we strive for accuracy, the scanner may make mistakes, and data can be incorrect or outdated. **Always manually verify DockerHub organizations** before conducting any security research. Ensure you're testing within the authorized scope of the bug bounty program.
+
 ## 🎯 Purpose
 
 This repository helps security researchers discover DockerHub organizations associated with bug bounty programs for:
@@ -30,7 +32,7 @@ This repository is **fully automated** with GitHub Actions:
 The auto-discovery system uses smart variations to find DockerHub organizations:
 
 1. **Exact Matches** - Tests the program name directly
-2. **Name Variations** - Removes hyphens, underscores, tries different combinations  
+2. **Name Variations** - Removes hyphens, underscores, tries different combinations
 3. **Common Patterns** - Tests with common suffixes (hq, inc, io, team, official)
 4. **Split Names** - Tries first/last parts of hyphenated names
 5. **Direct Verification** - Validates each candidate against DockerHub API
