@@ -66,11 +66,7 @@ jobs:
             discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+.*hub.docker.com" || echo "0")
 
             echo "📝 Committing $discovered new discoveries"
-            git commit -m "🐳 Auto-discover DockerHub organizations
-
-- Found: $discovered DockerHub usernames
-- Method: Google dorks + smart variations
-- Auto-discovery via GitHub Actions"
+            git commit -m "Auto-discover DockerHub organizations - Found: $discovered usernames"
 
             git push
             echo "✅ Changes pushed successfully"

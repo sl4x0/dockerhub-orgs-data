@@ -76,12 +76,7 @@ jobs:
             # Count new programs
             new_programs=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+http" || echo "0")
 
-            git commit -m "📅 Daily update: Fetch latest bug bounty programs
-
-- Date: $(date -u +%Y-%m-%d)
-- New programs: $new_programs
-- Stats updated
-- Auto-sync via GitHub Actions"
+            git commit -m "Daily update: Fetch latest bug bounty programs - New: $new_programs"
 
             git push
             echo "✅ Changes pushed successfully"
