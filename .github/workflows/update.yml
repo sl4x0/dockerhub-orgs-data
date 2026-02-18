@@ -34,6 +34,15 @@ jobs:
           python3 actions/fetch_all_programs.py
           echo "✅ Programs fetched successfully"
 
+      - name: Immediately discover DockerHub orgs for new programs
+        # Runs right after fetch so newly added programs don't sit as '?' for a full day.
+        # Batch of 75: fast enough for a daily job (~3 min), covers most new additions.
+        run: |
+          echo "🐳 Running immediate discovery for newly added programs..."
+          python3 actions/auto_discover.py 75
+          echo "✅ Immediate discovery complete"
+        continue-on-error: true
+
       - name: Verify existing DockerHub organizations
         run: |
           echo "🔍 Verifying existing DockerHub organizations..."
@@ -87,14 +96,18 @@ jobs:
 
           git add dockerhub-orgs-data/*.tsv
           git add docs/STATISTICS.md
+          # Include discovery log if the immediate-discovery step produced one
+          if [ -f discovery_log.txt ]; then git add discovery_log.txt; fi
 
           if git diff --staged --quiet; then
             echo "✅ No changes to commit"
           else
-            # Count new programs
+            # Count new program lines added
             new_programs=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+http" || echo "0")
+            # Count how many were immediately resolved to a DockerHub org
+            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -cP "^\+.*hub\.docker\.com" || echo "0")
 
-            git commit -m "Daily update: Fetch latest bug bounty programs - New: $new_programs"
+            git commit -m "Daily update: Fetch latest bug bounty programs - New: $new_programs, Discovered: $discovered"
 
             git push
             echo "✅ Changes pushed successfully"

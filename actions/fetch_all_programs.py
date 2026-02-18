@@ -100,19 +100,21 @@ def extract_programs_hackerone(data: list, bounty_only: bool) -> List[Tuple[str,
 
 
 def extract_programs_bugcrowd(data: list) -> List[Tuple[str, str]]:
-    """Extract programs from Bugcrowd data"""
+    """Extract programs from Bugcrowd data.
+
+    The Bugcrowd JSON has a 'url' field with the full program URL.
+    There is NO 'code' field — using 'code' caused bugcrowd.tsv to be empty.
+    """
     programs = []
 
     for program in data:
         if not isinstance(program, dict):
             continue
 
-        code = program.get('code')
-        if not code:
-            continue
-
-        url = f"https://bugcrowd.com/{code}"
-        programs.append((url, '?'))
+        # Use the full URL directly — it's already the canonical program URL
+        url = program.get('url')
+        if url and url.startswith(('http://', 'https://')):
+            programs.append((url, '?'))
 
     return programs
 
@@ -136,14 +138,18 @@ def extract_programs_intigriti(data: list) -> List[Tuple[str, str]]:
 
 
 def extract_programs_yeswehack(data: list) -> List[Tuple[str, str]]:
-    """Extract programs from YesWeHack data"""
+    """Extract programs from YesWeHack data.
+
+    Tries 'slug' first (standard URL identifier), falls back to 'id'.
+    """
     programs = []
 
     for program in data:
         if not isinstance(program, dict):
             continue
 
-        slug = program.get('slug')
+        # Try 'slug' (human-readable URL slug), then 'id' as fallback
+        slug = program.get('slug') or program.get('id')
         if not slug:
             continue
 
@@ -154,18 +160,27 @@ def extract_programs_yeswehack(data: list) -> List[Tuple[str, str]]:
 
 
 def extract_programs_federacy(data: list) -> List[Tuple[str, str]]:
-    """Extract programs from Federacy data"""
+    """Extract programs from Federacy data.
+
+    Uses the direct 'url' field if present, otherwise builds from 'handle'.
+    """
     programs = []
 
     for program in data:
         if not isinstance(program, dict):
             continue
 
-        # Prefer 'handle' (URL-safe slug) over 'name' which may contain spaces.
+        # Prefer a direct program URL if the data provides one
+        direct_url = program.get('url')
+        if direct_url and direct_url.startswith(('http://', 'https://')):
+            programs.append((direct_url, '?'))
+            continue
+
+        # Fall back to building the URL from the handle slug
         identifier = program.get('handle')
         if not identifier:
             name = str(program.get('name', ''))
-            # Only use name if it is already URL-safe (no encoding needed).
+            # Only use name if it is already URL-safe (no encoding needed)
             if name and urllib.parse.quote(name, safe='-_') == name:
                 identifier = name
 
@@ -201,9 +216,15 @@ def extract_programs_chaos(data: object) -> List[Tuple[str, str]]:
 
 
 def extract_programs_diodb(data: object) -> List[Tuple[str, str]]:
-    """Extract programs from diodb data"""
+    """Extract programs from diodb (disclose.io) data.
+
+    The diodb program-list.json is a TOP-LEVEL ARRAY (not a dict with 'programs').
+    Each program object uses 'policy_url' as the program page URL.
+    The field 'program_url' does NOT exist — using it caused diodb.tsv to be empty.
+    """
     programs = []
 
+    # If somehow wrapped in a dict, try to unwrap
     if isinstance(data, dict):
         data = data.get('programs', [])
 
@@ -211,9 +232,10 @@ def extract_programs_diodb(data: object) -> List[Tuple[str, str]]:
         if not isinstance(program, dict):
             continue
 
-        program_url = program.get('program_url') or program.get('url')
+        # Primary: policy_url (the bug bounty / disclosure policy page)
+        # Fallback: contact_url (alternative program entry point)
+        program_url = program.get('policy_url') or program.get('contact_url')
 
-        # Only accept well-formed HTTP(S) URLs.
         if program_url and program_url.startswith(('http://', 'https://')):
             programs.append((program_url, '?'))
 

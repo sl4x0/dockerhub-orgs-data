@@ -2,12 +2,14 @@ name: Auto-Discover DockerHub Organizations
 
 on:
   schedule:
-    # Run weekly on Saturdays at 04:00 UTC (discovers 100 programs per week)
-    - cron: "0 4 * * 6"
+    # Run daily at 05:00 UTC — after the update (02:00) and report (03:00) workflows.
+    # Processes 100 pending programs per day; clears all backlog in ~5 days then
+    # keeps up with daily new additions in real-time.
+    - cron: "0 5 * * *"
   workflow_dispatch:
     inputs:
       max_discoveries:
-        description: "Maximum number of programs to auto-discover (use 2000+ for initial bulk discovery)"
+        description: "Max programs to auto-discover (default 100; use 2000+ for a bulk catchup run)"
         required: false
         default: "100"
 
@@ -94,5 +96,5 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "**Next scheduled run**: Saturday 04:00 UTC" >> $GITHUB_STEP_SUMMARY
+          echo "**Next scheduled run**: Daily 05:00 UTC" >> $GITHUB_STEP_SUMMARY
           echo "**Repository**: https://github.com/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
