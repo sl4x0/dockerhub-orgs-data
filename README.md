@@ -43,12 +43,12 @@ This repository solves the "Where do they host their containers?" problem at sca
 
 All data is maintained through GitHub Actions with zero manual intervention required:
 
-| Workflow             | Schedule                     | Purpose                                                         |
-| -------------------- | ---------------------------- | --------------------------------------------------------------- |
-| **Update Programs**  | Daily 02:00 UTC              | Fetches latest bug bounty programs from all platforms           |
-| **Auto-Discover**    | Weekly (Saturdays 04:00 UTC) | Discovers DockerHub usernames using AI-powered pattern matching |
-| **Validate Data**    | On every push                | Ensures data integrity and format compliance                    |
-| **Generate Reports** | Daily 04:50 UTC              | Produces statistics and detailed analysis reports               |
+| Workflow             | Schedule        | Purpose                                                          |
+| -------------------- | --------------- | ---------------------------------------------------------------- |
+| **Update Programs**  | Daily 02:00 UTC | Fetches latest bug bounty programs from all platforms            |
+| **Auto-Discover**    | Daily 05:00 UTC | Discovers DockerHub usernames using intelligent pattern matching |
+| **Validate Data**    | On every push   | Ensures data integrity and format compliance                     |
+| **Generate Reports** | Daily 04:50 UTC | Produces statistics and detailed analysis reports                |
 
 ### 🧠 Intelligent Discovery Algorithm
 

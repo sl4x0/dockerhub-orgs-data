@@ -19,7 +19,7 @@ permissions:
 jobs:
   auto-discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3 hours max for large discoveries
+    timeout-minutes: 180 # 3 hours max for large discoveries
 
     steps:
       - name: Checkout code
