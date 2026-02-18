@@ -1,28 +1,20 @@
 # DockerHub Organizations Statistics
 
-Last updated: 2026-02-18
+Last updated: 2026-02-18 (UTC)
 
 ## Overview
 
-- **Total Programs**: 2067
-- **Mapped Organizations**: 1613
-- **TODO**: 436
+- **Total Programs**: 1882
+- **Mapped Organizations**: 1539
+- **TODO**: 343
 - **Not Found**: 0
-- **Coverage**: 78%
+- **Coverage**: 81.8%
 
 ## By Platform
-
-### bugbase
-- Total: 3
-- Mapped: 0
 
 ### bugcrowd.external_program
 - Total: 5
 - Mapped: 5
-
-### bugrap
-- Total: 3
-- Mapped: 0
 
 ### chaos
 - Total: 798
@@ -32,14 +24,6 @@ Last updated: 2026-02-18
 - Total: 35
 - Mapped: 23
 
-### federacy.external_program
-- Total: 35
-- Mapped: 23
-
-### hackenproof
-- Total: 3
-- Mapped: 0
-
 ### hackerone
 - Total: 456
 - Mapped: 391
@@ -48,29 +32,9 @@ Last updated: 2026-02-18
 - Total: 457
 - Mapped: 392
 
-### hatsfinance
-- Total: 3
-- Mapped: 0
-
-### immunefi
-- Total: 3
-- Mapped: 0
-
 ### intigriti
 - Total: 131
 - Mapped: 51
-
-### intigriti.external_program
-- Total: 131
-- Mapped: 51
-
-### whitehub
-- Total: 3
-- Mapped: 0
-
-### yeswehack.external_program
-- Total: 1
-- Mapped: 0
 
 ## All DockerHub Organizations
 

@@ -1,16 +1,8 @@
 # DockerHub Organizations - Detailed Report
 
-Last updated: 2026-02-18 04:50:09 UTC
+Last updated: 2026-02-18 16:29:13 UTC
 
 ## Programs by Platform
-
-### bugbase
-
-| Program | DockerHub Status |
-|---------|------------------|
-| # Placeholder for BugBase programs |  |
-| # Data source: Manual entry or bugbase.ai API (when available) |  |
-| # Format: program_url | dockerhub_org_url_or_? |
 
 ### bugcrowd.external_program
 
@@ -26,14 +18,6 @@ Last updated: 2026-02-18 04:50:09 UTC
 
 | Program | DockerHub Status |
 |---------|------------------|
-
-### bugrap
-
-| Program | DockerHub Status |
-|---------|------------------|
-| # Placeholder for BugRap programs |  |
-| # Data source: Manual entry (when available) |  |
-| # Format: program_url | dockerhub_org_url_or_? |
 
 ### chaos
 
@@ -843,46 +827,6 @@ Last updated: 2026-02-18 04:50:09 UTC
 | Program | DockerHub Status |
 |---------|------------------|
 
-### federacy.external_program
-
-| Program | DockerHub Status |
-|---------|------------------|
-| https://federacy.com/AngelList VDP | ? |
-| https://federacy.com/Archive-Intel-Inc | https://hub.docker.com/u/archive |
-| https://federacy.com/Belvo Technologies Inc. | ? |
-| https://federacy.com/Check | https://hub.docker.com/u/check |
-| https://federacy.com/Clay | https://hub.docker.com/u/clay |
-| https://federacy.com/Confido | https://hub.docker.com/u/confido |
-| https://federacy.com/Convictional | ? |
-| https://federacy.com/Cyber Info | https://hub.docker.com/u/cyberinfo |
-| https://federacy.com/Edgedive | ? |
-| https://federacy.com/Federacy | https://hub.docker.com/u/federacy |
-| https://federacy.com/Level365 | ? |
-| https://federacy.com/LimaCharlie | ? |
-| https://federacy.com/MobileAction | https://hub.docker.com/u/mobileaction |
-| https://federacy.com/Nanonets | https://hub.docker.com/u/nanonets |
-| https://federacy.com/Nelogica | ? |
-| https://federacy.com/Nucla | ? |
-| https://federacy.com/Officely | https://hub.docker.com/u/officely |
-| https://federacy.com/OneStepGPS | https://hub.docker.com/u/onestepgps |
-| https://federacy.com/Prevu3D | https://hub.docker.com/u/prevu3d |
-| https://federacy.com/Rally | https://hub.docker.com/u/rally |
-| https://federacy.com/Recidiviz | https://hub.docker.com/u/recidiviz |
-| https://federacy.com/RenoFi | https://hub.docker.com/u/renofi |
-| https://federacy.com/Spacelift | https://hub.docker.com/u/spacelift |
-| https://federacy.com/Stacksi | ? |
-| https://federacy.com/SupportBee | ? |
-| https://federacy.com/Sylaps | https://hub.docker.com/u/sylaps |
-| https://federacy.com/Tuple | https://hub.docker.com/u/tuple |
-| https://federacy.com/Upfort | ? |
-| https://federacy.com/Vertex | https://hub.docker.com/u/vertex |
-| https://federacy.com/biorender | https://hub.docker.com/u/biorender |
-| https://federacy.com/cooper | https://hub.docker.com/u/cooper |
-| https://federacy.com/crowdai | https://hub.docker.com/u/crowdai |
-| https://federacy.com/delight-im | https://hub.docker.com/u/delight |
-| https://federacy.com/eqtble | ? |
-| https://federacy.com/okteto | https://hub.docker.com/u/okteto |
-
 ### federacy
 
 | Program | DockerHub Status |
@@ -922,14 +866,6 @@ Last updated: 2026-02-18 04:50:09 UTC
 | https://federacy.com/delight-im | https://hub.docker.com/u/delight |
 | https://federacy.com/eqtble | ? |
 | https://federacy.com/okteto | https://hub.docker.com/u/okteto |
-
-### hackenproof
-
-| Program | DockerHub Status |
-|---------|------------------|
-| # Placeholder for HackenProof programs |  |
-| # Data source: Manual entry or hackenproof.com API (when available) |  |
-| # Format: program_url | dockerhub_org_url_or_? |
 
 ### hackerone.external_program
 
@@ -1854,158 +1790,6 @@ Last updated: 2026-02-18 04:50:09 UTC
 | https://hackerone.com/zooplus | https://hub.docker.com/u/zooplus |
 | https://hackerone.com/zurich-insurance | https://hub.docker.com/u/zurichinsurance |
 
-### hatsfinance
-
-| Program | DockerHub Status |
-|---------|------------------|
-| # Placeholder for HatsFinance programs |  |
-| # Data source: Manual entry or hats.finance API (when available) |  |
-| # Format: program_url | dockerhub_org_url_or_? |
-
-### immunefi
-
-| Program | DockerHub Status |
-|---------|------------------|
-| # Placeholder for Immunefi programs |  |
-| # Data source: Manual entry or immunefi.com API (when available) |  |
-| # Format: program_url | dockerhub_org_url_or_? |
-
-### intigriti.external_program
-
-| Program | DockerHub Status |
-|---------|------------------|
-| https://app.intigriti.com/programs | ? |
-| https://app.intigriti.com/programs/VismaResponsibleDisclosure | ? |
-| https://app.intigriti.com/programs/aikido | ? |
-| https://app.intigriti.com/programs/algemeendagblad | ? |
-| https://app.intigriti.com/programs/allegrobugbounty | ? |
-| https://app.intigriti.com/programs/altera | ? |
-| https://app.intigriti.com/programs/amd | ? |
-| https://app.intigriti.com/programs/anacondavdp | ? |
-| https://app.intigriti.com/programs/arboniavdpprogram | ? |
-| https://app.intigriti.com/programs/arkanenetwork | ? |
-| https://app.intigriti.com/programs/arm | https://hub.docker.com/u/arminc |
-| https://app.intigriti.com/programs/axelspringersevulnerabilitydisclosureprogram | ? |
-| https://app.intigriti.com/programs/bitvavovdp | ? |
-| https://app.intigriti.com/programs/bmc | https://hub.docker.com/u/bmcteam |
-| https://app.intigriti.com/programs/bmwgroup | https://hub.docker.com/u/bmwgroup |
-| https://app.intigriti.com/programs/bmwgroup-automotive | https://hub.docker.com/u/bmwgroup |
-| https://app.intigriti.com/programs/buhlergroupvdp | ? |
-| https://app.intigriti.com/programs/capitalcom | https://hub.docker.com/u/capitalcom |
-| https://app.intigriti.com/programs/challenge0226 | ? |
-| https://app.intigriti.com/programs/cloudways | https://hub.docker.com/u/cloudways |
-| https://app.intigriti.com/programs/cmcom | ? |
-| https://app.intigriti.com/programs/coca-cola | https://hub.docker.com/u/cocacola |
-| https://app.intigriti.com/programs/crossborderfines | ? |
-| https://app.intigriti.com/programs/cybersecuritycoalition | ? |
-| https://app.intigriti.com/programs/datacamp | https://hub.docker.com/u/datacamp |
-| https://app.intigriti.com/programs/demorgen | https://hub.docker.com/u/demorgen |
-| https://app.intigriti.com/programs/devolkskrant | ? |
-| https://app.intigriti.com/programs/dhlvdp | ? |
-| https://app.intigriti.com/programs/digitalocean | https://hub.docker.com/u/digitalocean |
-| https://app.intigriti.com/programs/donorboxvdp | ? |
-| https://app.intigriti.com/programs/dpgmedia | https://hub.docker.com/u/dpgmedia |
-| https://app.intigriti.com/programs/driessenvdp | ? |
-| https://app.intigriti.com/programs/dropbox | https://hub.docker.com/u/dropbox |
-| https://app.intigriti.com/programs/dropbox-vdp | https://hub.docker.com/u/dropbox |
-| https://app.intigriti.com/programs/dstnybugbounty | ? |
-| https://app.intigriti.com/programs/dummy | https://hub.docker.com/u/dummyteam |
-| https://app.intigriti.com/programs/e-tracker | https://hub.docker.com/u/etracker |
-| https://app.intigriti.com/programs/ehealthhub&meta-hubvznkul | ? |
-| https://app.intigriti.com/programs/exactvulnerabilitydisclosureprogram | ? |
-| https://app.intigriti.com/programs/excoscalebugbounty | ? |
-| https://app.intigriti.com/programs/fing | https://hub.docker.com/u/fing |
-| https://app.intigriti.com/programs/freepikcompany | ? |
-| https://app.intigriti.com/programs/grafanaossbbp | ? |
-| https://app.intigriti.com/programs/heretechnologies | https://hub.docker.com/u/heretechnologies |
-| https://app.intigriti.com/programs/hetlaatstenieuws | ? |
-| https://app.intigriti.com/programs/hetparool | ? |
-| https://app.intigriti.com/programs/houseofhrvulnerabilitydisclosureprogram | ? |
-| https://app.intigriti.com/programs/hrsgroupvdp | ? |
-| https://app.intigriti.com/programs/huisvesting | ? |
-| https://app.intigriti.com/programs/humo | https://hub.docker.com/u/humo |
-| https://app.intigriti.com/programs/iciparisxl | ? |
-| https://app.intigriti.com/programs/ing-responsible-disclosure | https://hub.docker.com/u/disclosure |
-| https://app.intigriti.com/programs/innogames | https://hub.docker.com/u/innogames |
-| https://app.intigriti.com/programs/innovapost | https://hub.docker.com/u/innovapost |
-| https://app.intigriti.com/programs/intel | https://hub.docker.com/u/intel |
-| https://app.intigriti.com/programs/intergamma | ? |
-| https://app.intigriti.com/programs/intigriti | https://hub.docker.com/u/intigriti |
-| https://app.intigriti.com/programs/kiwavdp | ? |
-| https://app.intigriti.com/programs/kruidvat | ? |
-| https://app.intigriti.com/programs/kuleuvenrdp | ? |
-| https://app.intigriti.com/programs/lansweeper1 | ? |
-| https://app.intigriti.com/programs/libelle | ? |
-| https://app.intigriti.com/programs/marionnaud | ? |
-| https://app.intigriti.com/programs/meshtastic | https://hub.docker.com/u/meshtastic |
-| https://app.intigriti.com/programs/mobilevikings | https://hub.docker.com/u/mobilevikings |
-| https://app.intigriti.com/programs/monzopublicbugbountyprogram | ? |
-| https://app.intigriti.com/programs/moralisio | ? |
-| https://app.intigriti.com/programs/nestlévdp | ? |
-| https://app.intigriti.com/programs/nexuzhealth | https://hub.docker.com/u/nexuzhealth |
-| https://app.intigriti.com/programs/nexuzhealthvdp | ? |
-| https://app.intigriti.com/programs/nexuzhealthwebpacs | ? |
-| https://app.intigriti.com/programs/ninjakiwigames | ? |
-| https://app.intigriti.com/programs/nmt | https://hub.docker.com/u/nmtteam |
-| https://app.intigriti.com/programs/nvidiavdp | ? |
-| https://app.intigriti.com/programs/oda | https://hub.docker.com/u/odaio |
-| https://app.intigriti.com/programs/onlineinschrijvingenbetalingstoepassing | ? |
-| https://app.intigriti.com/programs/orbiavdp | ? |
-| https://app.intigriti.com/programs/ovovdp | ? |
-| https://app.intigriti.com/programs/pdqcomprivate | ? |
-| https://app.intigriti.com/programs/peoplecert | ? |
-| https://app.intigriti.com/programs/personio | https://hub.docker.com/u/personio |
-| https://app.intigriti.com/programs/portofantwerp | https://hub.docker.com/u/portofantwerp |
-| https://app.intigriti.com/programs/privatebankdelen | ? |
-| https://app.intigriti.com/programs/proofvdp | ? |
-| https://app.intigriti.com/programs/qualifiedresponsibledisclosureprogram | ? |
-| https://app.intigriti.com/programs/randstad | https://hub.docker.com/u/randstad |
-| https://app.intigriti.com/programs/redbull | https://hub.docker.com/u/redbull |
-| https://app.intigriti.com/programs/responsiblevulnerabilitydisclosureprogram | ? |
-| https://app.intigriti.com/programs/revolutvdp | ? |
-| https://app.intigriti.com/programs/rgfbe-vdp | ? |
-| https://app.intigriti.com/programs/ripencc | https://hub.docker.com/u/ripencc |
-| https://app.intigriti.com/programs/rivianbugbounty | ? |
-| https://app.intigriti.com/programs/sbbglobal | ? |
-| https://app.intigriti.com/programs/signicatresponsibledisclosure | ? |
-| https://app.intigriti.com/programs/simscale | https://hub.docker.com/u/simscale |
-| https://app.intigriti.com/programs/skodaautoprivatebugbountyprogram | ? |
-| https://app.intigriti.com/programs/socialdeal | https://hub.docker.com/u/socialdeal |
-| https://app.intigriti.com/programs/speakapresponsibledisclosure | ? |
-| https://app.intigriti.com/programs/sqillscorporatewebsite | ? |
-| https://app.intigriti.com/programs/storebrand-rd | https://hub.docker.com/u/storebrand |
-| https://app.intigriti.com/programs/superdrug | ? |
-| https://app.intigriti.com/programs/tempo-team | https://hub.docker.com/u/team |
-| https://app.intigriti.com/programs/theperfumeshop | ? |
-| https://app.intigriti.com/programs/toastvdp | ? |
-| https://app.intigriti.com/programs/tomorrowland | https://hub.docker.com/u/tomorrowland |
-| https://app.intigriti.com/programs/torfs | ? |
-| https://app.intigriti.com/programs/trouw | https://hub.docker.com/u/trouw |
-| https://app.intigriti.com/programs/truelayer | https://hub.docker.com/u/truelayer |
-| https://app.intigriti.com/programs/twago | https://hub.docker.com/u/twago |
-| https://app.intigriti.com/programs/tweakers | https://hub.docker.com/u/tweakers |
-| https://app.intigriti.com/programs/ubisoftvdp | ? |
-| https://app.intigriti.com/programs/upholdcom | ? |
-| https://app.intigriti.com/programs/usz-vdp | ? |
-| https://app.intigriti.com/programs/uzleuven | https://hub.docker.com/u/uzleuven |
-| https://app.intigriti.com/programs/vdp | https://hub.docker.com/u/vdpteam |
-| https://app.intigriti.com/programs/veriffbugbounty | ? |
-| https://app.intigriti.com/programs/visma | https://hub.docker.com/u/visma |
-| https://app.intigriti.com/programs/vlerickbusinessschool | ? |
-| https://app.intigriti.com/programs/voiscooters | ? |
-| https://app.intigriti.com/programs/voivulnerabilitydisclosureprogram | ? |
-| https://app.intigriti.com/programs/vrtnv | ? |
-| https://app.intigriti.com/programs/vtmgo | ? |
-| https://app.intigriti.com/programs/water-link | https://hub.docker.com/u/waterlink |
-| https://app.intigriti.com/programs/watsons | https://hub.docker.com/u/watsons |
-| https://app.intigriti.com/programs/website | https://hub.docker.com/u/website |
-| https://app.intigriti.com/programs/wolt | https://hub.docker.com/u/wolt |
-| https://app.intigriti.com/programs/wpengine | https://hub.docker.com/u/wpengine |
-| https://app.intigriti.com/programs/wpenginebugbounty | ? |
-| https://app.intigriti.com/programs/yacht | https://hub.docker.com/u/yacht |
-| https://app.intigriti.com/programs/yahoobugbounty | ? |
-| https://app.intigriti.com/programs/zabkagroup-vdp | ? |
-
 ### intigriti
 
 | Program | DockerHub Status |
@@ -2142,21 +1926,7 @@ Last updated: 2026-02-18 04:50:09 UTC
 | https://app.intigriti.com/programs/yahoobugbounty | ? |
 | https://app.intigriti.com/programs/zabkagroup-vdp | ? |
 
-### whitehub
-
-| Program | DockerHub Status |
-|---------|------------------|
-| # Placeholder for WhiteHub programs |  |
-| # Data source: Manual entry (when available) |  |
-| # Format: program_url | dockerhub_org_url_or_? |
-
 ### yeswehack.external_program
-
-| Program | DockerHub Status |
-|---------|------------------|
-| https://yeswehack.com/programs | ? |
-
-### yeswehack
 
 | Program | DockerHub Status |
 |---------|------------------|
