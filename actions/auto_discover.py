@@ -30,7 +30,7 @@ SKIP_PARTS = {
     'hackerone.com', 'bugcrowd.com', 'app.intigriti.com', 'intigriti.com',
     'yeswehack.com', 'federacy.com', 'hackenproof.com', 'bugbase.io',
     'bugrap.com', 'hatsfinance.io', 'whitehub.io', 'chaos.projectdiscovery.io',
-    'programs', 'program', 'www', 'company', 'app', 'bounty', 'security',
+    'programs', 'program', 'engagements', 'www', 'company', 'app', 'bounty', 'security',
 }
 
 HEADERS = {
