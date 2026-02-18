@@ -62,11 +62,6 @@ jobs:
           git add dockerhub-orgs-data/*.tsv
           git add docs/STATISTICS.md
 
-          # Add discovery log if it exists
-          if [ -f discovery_log.txt ]; then
-            git add discovery_log.txt
-          fi
-
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "✅ No new discoveries to commit"

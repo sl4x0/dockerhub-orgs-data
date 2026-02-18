@@ -93,8 +93,6 @@ jobs:
 
           git add dockerhub-orgs-data/*.tsv
           git add docs/STATISTICS.md
-          # Include discovery log if the immediate-discovery step produced one
-          if [ -f discovery_log.txt ]; then git add discovery_log.txt; fi
 
           if git diff --staged --quiet; then
             echo "✅ No changes to commit"
