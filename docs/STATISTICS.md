@@ -1,12 +1,12 @@
 # DockerHub Organizations Statistics
 
-Last updated: 2026-02-17
+Last updated: 2026-02-18
 
 ## Overview
 
-- **Total Programs**: 2066
+- **Total Programs**: 2067
 - **Mapped Organizations**: 1613
-- **TODO**: 435
+- **TODO**: 436
 - **Not Found**: 0
 - **Coverage**: 78%
 
@@ -57,7 +57,7 @@ Last updated: 2026-02-17
 - Mapped: 0
 
 ### intigriti
-- Total: 130
+- Total: 131
 - Mapped: 51
 
 ### intigriti.external_program
