@@ -6,10 +6,12 @@ Pulls data from: HackerOne, Bugcrowd, Intigriti, YesWeHack, Federacy, Chaos, dio
 
 import json
 import urllib.request
+import urllib.error
+import urllib.parse
 import sys
-from pathlib import Path
-from typing import Dict, List, Tuple
 import time
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 
 # Data source URLs
@@ -18,7 +20,6 @@ CHAOS_URL = "https://raw.githubusercontent.com/projectdiscovery/public-bugbounty
 DIODB_URL = "https://raw.githubusercontent.com/disclose/diodb/master"
 
 DATA_SOURCES = {
-    "hackerone.external_program": f"{BOUNTY_TARGETS_URL}/hackerone_data.json",
     "hackerone": f"{BOUNTY_TARGETS_URL}/hackerone_data.json",
     "bugcrowd": f"{BOUNTY_TARGETS_URL}/bugcrowd_data.json",
     "intigriti": f"{BOUNTY_TARGETS_URL}/intigriti_data.json",
@@ -28,20 +29,52 @@ DATA_SOURCES = {
     "diodb": f"{DIODB_URL}/program-list.json",
 }
 
-
-def fetch_json(url: str) -> dict:
-    """Fetch JSON data from URL"""
-    try:
-        print(f"Fetching: {url}")
-        with urllib.request.urlopen(url, timeout=30) as response:
-            return json.loads(response.read().decode())
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
-        return {}
+HEADERS = {
+    'User-Agent': 'dockerhub-orgs-data/1.0 (https://github.com/sl4x0/dockerhub-orgs-data)'
+}
 
 
-def extract_programs_hackerone(data: dict) -> List[Tuple[str, str]]:
-    """Extract programs from HackerOne data"""
+def fetch_json(url: str, retries: int = 3) -> Any:
+    """Fetch JSON data from URL with retry + exponential backoff.
+
+    Returns parsed JSON (dict or list) on success, None on permanent failure.
+    Distinguishes between network errors (retried) and permanent errors (404/403).
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            print(f"Fetching: {url} (attempt {attempt}/{retries})")
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return json.loads(response.read().decode())
+        except urllib.error.HTTPError as e:
+            print(f"HTTP {e.code} fetching {url}: {e.reason}")
+            if e.code in (403, 404):
+                print(f"  Permanent error ({e.code}), skipping retries.")
+                return None
+            # 429, 5xx -> retry with backoff
+        except Exception as e:
+            print(f"Error fetching {url} (attempt {attempt}): {e}")
+
+        if attempt < retries:
+            wait = 2 ** attempt  # 2s, 4s
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
+
+    print(f"❌ Failed to fetch {url} after {retries} attempts")
+    return None
+
+
+def extract_programs_hackerone(data: list, bounty_only: bool) -> List[Tuple[str, str]]:
+    """Extract programs from HackerOne data.
+
+    Args:
+        bounty_only: True  -> paid bug bounty programs (offers_bounties=True)
+                     False -> VDPs / disclosure programs (offers_bounties=False)
+
+    HackerOne data is fetched once and split into two TSV files so that
+    hackerone.tsv and hackerone.external_program.tsv contain distinct,
+    non-overlapping programs rather than identical duplicates.
+    """
     programs = []
 
     for program in data:
@@ -52,13 +85,21 @@ def extract_programs_hackerone(data: dict) -> List[Tuple[str, str]]:
         if not handle:
             continue
 
+        # Split on offers_bounties; default True if field is absent.
+        offers_bounties = program.get('offers_bounties', True)
+
+        if bounty_only and not offers_bounties:
+            continue
+        if not bounty_only and offers_bounties:
+            continue
+
         url = f"https://hackerone.com/{handle}"
         programs.append((url, '?'))
 
     return programs
 
 
-def extract_programs_bugcrowd(data: dict) -> List[Tuple[str, str]]:
+def extract_programs_bugcrowd(data: list) -> List[Tuple[str, str]]:
     """Extract programs from Bugcrowd data"""
     programs = []
 
@@ -76,7 +117,7 @@ def extract_programs_bugcrowd(data: dict) -> List[Tuple[str, str]]:
     return programs
 
 
-def extract_programs_intigriti(data: dict) -> List[Tuple[str, str]]:
+def extract_programs_intigriti(data: list) -> List[Tuple[str, str]]:
     """Extract programs from Intigriti data"""
     programs = []
 
@@ -94,7 +135,7 @@ def extract_programs_intigriti(data: dict) -> List[Tuple[str, str]]:
     return programs
 
 
-def extract_programs_yeswehack(data: dict) -> List[Tuple[str, str]]:
+def extract_programs_yeswehack(data: list) -> List[Tuple[str, str]]:
     """Extract programs from YesWeHack data"""
     programs = []
 
@@ -112,7 +153,7 @@ def extract_programs_yeswehack(data: dict) -> List[Tuple[str, str]]:
     return programs
 
 
-def extract_programs_federacy(data: dict) -> List[Tuple[str, str]]:
+def extract_programs_federacy(data: list) -> List[Tuple[str, str]]:
     """Extract programs from Federacy data"""
     programs = []
 
@@ -120,7 +161,14 @@ def extract_programs_federacy(data: dict) -> List[Tuple[str, str]]:
         if not isinstance(program, dict):
             continue
 
-        identifier = program.get('handle') or program.get('name')
+        # Prefer 'handle' (URL-safe slug) over 'name' which may contain spaces.
+        identifier = program.get('handle')
+        if not identifier:
+            name = str(program.get('name', ''))
+            # Only use name if it is already URL-safe (no encoding needed).
+            if name and urllib.parse.quote(name, safe='-_') == name:
+                identifier = name
+
         if identifier:
             url = f"https://federacy.com/{identifier}"
             programs.append((url, '?'))
@@ -128,7 +176,7 @@ def extract_programs_federacy(data: dict) -> List[Tuple[str, str]]:
     return programs
 
 
-def extract_programs_chaos(data: dict) -> List[Tuple[str, str]]:
+def extract_programs_chaos(data: object) -> List[Tuple[str, str]]:
     """Extract programs from Chaos (ProjectDiscovery) data"""
     programs = []
 
@@ -142,17 +190,17 @@ def extract_programs_chaos(data: dict) -> List[Tuple[str, str]]:
         name = program.get('name')
         url = program.get('url')
 
-        if url and 'http' in url:
+        if url and url.startswith(('http://', 'https://')):
             programs.append((url, '?'))
         elif name:
-            # Use program name as identifier
-            url = f"https://chaos.projectdiscovery.io/programs/{name.replace(' ', '-')}"
-            programs.append((url, '?'))
+            slug = name.replace(' ', '-').lower()
+            fallback_url = f"https://chaos.projectdiscovery.io/programs/{slug}"
+            programs.append((fallback_url, '?'))
 
     return programs
 
 
-def extract_programs_diodb(data: dict) -> List[Tuple[str, str]]:
+def extract_programs_diodb(data: object) -> List[Tuple[str, str]]:
     """Extract programs from diodb data"""
     programs = []
 
@@ -163,10 +211,10 @@ def extract_programs_diodb(data: dict) -> List[Tuple[str, str]]:
         if not isinstance(program, dict):
             continue
 
-        # Try to get program URL
         program_url = program.get('program_url') or program.get('url')
 
-        if program_url:
+        # Only accept well-formed HTTP(S) URLs.
+        if program_url and program_url.startswith(('http://', 'https://')):
             programs.append((program_url, '?'))
 
     return programs
@@ -189,22 +237,22 @@ def load_existing_data(filepath: Path) -> Dict[str, str]:
 
 
 def update_tsv_file(filepath: Path, programs: List[Tuple[str, str]]):
-    """Update TSV file with program data"""
+    """Update TSV file — adds new programs, preserves all existing mappings"""
     existing = load_existing_data(filepath)
+    new_count = 0
 
-    # Merge with new data (preserve existing mappings)
     for program_url, status in programs:
         if program_url not in existing:
             existing[program_url] = status
+            new_count += 1
 
-    # Write back to file (sorted)
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
     with open(filepath, 'w', encoding='utf-8', newline='\n') as f:
         for url in sorted(existing.keys()):
             f.write(f"{url}\t{existing[url]}\n")
 
-    print(f"✓ Updated {filepath.name}: {len(existing)} programs")
+    print(f"✓ Updated {filepath.name}: {len(existing)} programs (+{new_count} new)")
 
 
 def main():
@@ -215,61 +263,73 @@ def main():
     print("=" * 70)
     print()
 
-    # HackerOne External Programs
-    print("Processing HackerOne (External Programs)...")
-    h1_data = fetch_json(DATA_SOURCES["hackerone.external_program"])
-    if h1_data:
-        programs = extract_programs_hackerone(h1_data)
-        update_tsv_file(data_dir / "hackerone.external_program.tsv", programs)
-
-    # HackerOne Main
-    print("\nProcessing HackerOne (Main List)...")
-    h1_main = fetch_json(DATA_SOURCES["hackerone"])
-    if h1_main:
-        programs = extract_programs_hackerone(h1_main)
+    # HackerOne — fetch once, split into two files by program type
+    print("Processing HackerOne...")
+    h1_data = fetch_json(DATA_SOURCES["hackerone"])
+    if h1_data is not None:
+        # Bug bounty programs (offers_bounties=True) -> hackerone.tsv
+        programs = extract_programs_hackerone(h1_data, bounty_only=True)
         update_tsv_file(data_dir / "hackerone.tsv", programs)
+
+        # VDPs / disclosure programs (offers_bounties=False) -> hackerone.external_program.tsv
+        programs = extract_programs_hackerone(h1_data, bounty_only=False)
+        update_tsv_file(data_dir / "hackerone.external_program.tsv", programs)
+    else:
+        print("⚠️  Skipping HackerOne — fetch failed")
 
     # Bugcrowd
     print("\nProcessing Bugcrowd...")
     bc_data = fetch_json(DATA_SOURCES["bugcrowd"])
-    if bc_data:
+    if bc_data is not None:
         programs = extract_programs_bugcrowd(bc_data)
         update_tsv_file(data_dir / "bugcrowd.tsv", programs)
+    else:
+        print("⚠️  Skipping Bugcrowd — fetch failed")
 
     # Intigriti
     print("\nProcessing Intigriti...")
     ig_data = fetch_json(DATA_SOURCES["intigriti"])
-    if ig_data:
+    if ig_data is not None:
         programs = extract_programs_intigriti(ig_data)
         update_tsv_file(data_dir / "intigriti.tsv", programs)
+    else:
+        print("⚠️  Skipping Intigriti — fetch failed")
 
-    # YesWeHack
+    # YesWeHack — file is yeswehack.external_program.tsv (not yeswehack.tsv)
     print("\nProcessing YesWeHack...")
     ywh_data = fetch_json(DATA_SOURCES["yeswehack"])
-    if ywh_data:
+    if ywh_data is not None:
         programs = extract_programs_yeswehack(ywh_data)
-        update_tsv_file(data_dir / "yeswehack.tsv", programs)
+        update_tsv_file(data_dir / "yeswehack.external_program.tsv", programs)
+    else:
+        print("⚠️  Skipping YesWeHack — fetch failed")
 
     # Federacy
     print("\nProcessing Federacy...")
     fed_data = fetch_json(DATA_SOURCES["federacy"])
-    if fed_data:
+    if fed_data is not None:
         programs = extract_programs_federacy(fed_data)
         update_tsv_file(data_dir / "federacy.tsv", programs)
+    else:
+        print("⚠️  Skipping Federacy — fetch failed")
 
     # Chaos (ProjectDiscovery)
     print("\nProcessing Chaos (ProjectDiscovery)...")
     chaos_data = fetch_json(DATA_SOURCES["chaos"])
-    if chaos_data:
+    if chaos_data is not None:
         programs = extract_programs_chaos(chaos_data)
         update_tsv_file(data_dir / "chaos.tsv", programs)
+    else:
+        print("⚠️  Skipping Chaos — fetch failed")
 
     # diodb (disclose.io)
     print("\nProcessing diodb (disclose.io)...")
     diodb_data = fetch_json(DATA_SOURCES["diodb"])
-    if diodb_data:
+    if diodb_data is not None:
         programs = extract_programs_diodb(diodb_data)
         update_tsv_file(data_dir / "diodb.tsv", programs)
+    else:
+        print("⚠️  Skipping diodb — fetch failed")
 
     print()
     print("=" * 70)

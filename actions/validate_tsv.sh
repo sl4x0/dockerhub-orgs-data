@@ -23,9 +23,9 @@ if ! grep -q $'\t' "$FILE"; then
     exit 1
 fi
 
-# Check for trailing whitespace
-if grep -q '[[:space:]]$' "$FILE"; then
-    echo "⚠️  Warning: File has trailing whitespace"
+# Check for trailing spaces (tabs at end of line are part of TSV and not flagged)
+if grep -q ' $' "$FILE"; then
+    echo "⚠️  Warning: File has trailing spaces"
 fi
 
 # Check for valid URLs

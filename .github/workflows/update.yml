@@ -25,6 +25,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Python dependencies
+        run: pip install -r actions/requirements.txt
+
       - name: Fetch and update programs
         run: |
           echo "🔄 Fetching bug bounty programs from ALL sources..."
@@ -39,18 +42,33 @@ jobs:
             chmod +x scripts/all-dockerhub-orgs.sh
             ./scripts/all-dockerhub-orgs.sh | while read -r org; do
               if [ -n "$org" ]; then
-                echo "Checking: $org"
+                # Validate org name is alphanumeric (no shell injection risk)
+                if [[ ! "$org" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                  echo "⚠ Skipping invalid org name: $org"
+                  continue
+                fi
 
-                status=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/users/${org}")
+                echo "Checking: $org"
+                status=$(curl -s -o /dev/null -w "%{http_code}" \
+                  -H "User-Agent: dockerhub-orgs-data/1.0" \
+                  "https://hub.docker.com/v2/users/${org}")
+
+                # Ensure status is numeric before comparison
+                if [[ ! "$status" =~ ^[0-9]+$ ]]; then
+                  echo "? $org (curl error)"
+                  continue
+                fi
 
                 if [ "$status" -eq 200 ]; then
                   echo "✓ $org exists"
                 elif [ "$status" -eq 404 ]; then
                   echo "✗ $org not found"
                   echo "$org" >> missing_orgs.txt
+                else
+                  echo "? $org (HTTP $status — transient, not recording as missing)"
                 fi
 
-                sleep 1
+                sleep 0.5
               fi
             done
           fi
@@ -82,23 +100,49 @@ jobs:
             echo "✅ Changes pushed successfully"
           fi
 
-      - name: Create issue for missing organizations
+      - name: Create or update issue for missing organizations
         if: hashFiles('missing_orgs.txt') != ''
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            if (fs.existsSync('missing_orgs.txt')) {
-              const missing = fs.readFileSync('missing_orgs.txt', 'utf8');
-              const orgs = missing.trim().split('\n').filter(o => o.length > 0);
+            if (!fs.existsSync('missing_orgs.txt')) return;
 
-              if (orgs.length > 0) {
-                await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: `🔍 Missing DockerHub Organizations Detected`,
-                  body: `The following DockerHub organizations appear to be missing or inaccessible:\n\n${orgs.map(o => `- ${o}`).join('\n')}\n\nThese may have been:\n- Deleted\n- Renamed\n- Made private\n- API returned an error\n\nPlease verify and update the database accordingly.`,
-                  labels: ['automated', 'needs-verification']
-                });
-              }
+            const missing = fs.readFileSync('missing_orgs.txt', 'utf8');
+            const orgs = missing.trim().split('\n').filter(o => o.length > 0);
+            if (orgs.length === 0) return;
+
+            const ISSUE_TITLE = 'Missing DockerHub Organizations Detected';
+            const today = new Date().toISOString().split('T')[0];
+            const body = `The following DockerHub organizations returned HTTP 404 on ${today}:\n\n${orgs.map(o => `- \`${o}\``).join('\n')}\n\nThese may have been:\n- Deleted\n- Renamed\n- Made private\n\nPlease verify and update the database accordingly.`;
+
+            // Check for an existing open issue to avoid creating duplicates daily
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'automated,needs-verification',
+              per_page: 50,
+            });
+
+            const existing = openIssues.find(i => i.title === ISSUE_TITLE);
+
+            if (existing) {
+              // Add a comment to the existing issue instead of opening a new one
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `**Updated list (${today}):**\n\n${orgs.map(o => `- \`${o}\``).join('\n')}`,
+              });
+              console.log(`Updated existing issue #${existing.number}`);
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: ISSUE_TITLE,
+                body,
+                labels: ['automated', 'needs-verification'],
+              });
+              console.log('Created new issue for missing organizations');
             }

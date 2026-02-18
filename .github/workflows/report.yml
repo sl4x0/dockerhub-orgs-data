@@ -53,7 +53,10 @@ jobs:
 
               while IFS=$'\t' read -r program dockerhub; do
                 if [ -n "$program" ]; then
-                  echo "| $program | $dockerhub |" >> docs/DETAILED_REPORT.md
+                  # Escape any literal '|' chars so the markdown table isn't broken
+                  safe_program="${program//|/\\|}"
+                  safe_dockerhub="${dockerhub//|/\\|}"
+                  echo "| $safe_program | $safe_dockerhub |" >> docs/DETAILED_REPORT.md
                 fi
               done < "$file"
 

@@ -16,7 +16,8 @@ DATA_DIR="${SCRIPT_DIR}/../dockerhub-orgs-data"
 echo "Searching for: $QUERY"
 echo ""
 
-grep -i "$QUERY" "$DATA_DIR"/*.tsv | while IFS=: read -r file line; do
+# -F: fixed string (not regex) prevents injection via special chars in QUERY
+grep -iF "$QUERY" "$DATA_DIR"/*.tsv | while IFS=: read -r file line; do
     platform=$(basename "$file" .tsv)
     echo "[$platform] $line"
 done

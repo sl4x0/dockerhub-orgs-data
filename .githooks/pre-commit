@@ -1,21 +1,44 @@
 #!/bin/bash
 
-# Pre-commit hook to validate data files
+# Pre-commit hook to validate data files.
+# Uses git rev-parse to locate the repo root so this hook works correctly
+# regardless of which directory git commit is invoked from.
+
 echo "Running pre-commit checks..."
 
-# Check for proper TSV format
-for file in dockerhub-orgs-data/*.tsv; do
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+DATA_DIR="${REPO_ROOT}/dockerhub-orgs-data"
+
+if [ ! -d "$DATA_DIR" ]; then
+    echo "⚠️  Data directory not found: $DATA_DIR — skipping TSV checks"
+    exit 0
+fi
+
+failed=0
+
+for file in "$DATA_DIR"/*.tsv; do
     if [ -f "$file" ]; then
         echo "Validating $file..."
-        # Check for tabs (TSV format)
+
+        # Check for tab characters (required for TSV format)
         if grep -q $'\t' "$file"; then
-            echo "✓ $file has valid TSV format"
+            echo "  ✓ Tab-separated format OK"
         else
-            echo "✗ $file doesn't appear to be tab-separated"
-            exit 1
+            echo "  ✗ $file doesn't appear to be tab-separated"
+            failed=1
+        fi
+
+        # Check for trailing spaces (not tabs — tabs are valid in TSV)
+        if grep -q ' $' "$file"; then
+            echo "  ⚠  Warning: $file has trailing spaces"
         fi
     fi
 done
+
+if [ "$failed" -ne 0 ]; then
+    echo "Pre-commit checks FAILED — fix TSV format issues above before committing."
+    exit 1
+fi
 
 echo "Pre-commit checks passed!"
 exit 0

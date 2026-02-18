@@ -33,9 +33,9 @@ jobs:
                 exit 1
               fi
 
-              # Check for trailing whitespace
-              if grep -q '[[:space:]]$' "$file"; then
-                echo "WARNING: $file has trailing whitespace"
+              # Check for trailing spaces (tabs are valid in TSV)
+              if grep -q ' $' "$file"; then
+                echo "WARNING: $file has trailing spaces"
               fi
 
               echo "✓ $file is valid"
@@ -66,17 +66,20 @@ jobs:
         run: |
           echo "## Repository Statistics" >> $GITHUB_STEP_SUMMARY
 
-          total_programs=$(cat dockerhub-orgs-data/*.tsv | wc -l)
-          mapped_orgs=$(grep -E "https://hub\.docker\.com/u/" dockerhub-orgs-data/*.tsv | wc -l)
-          todo_count=$(grep "?" dockerhub-orgs-data/*.tsv | wc -l)
-          not_found=$(grep -E "\t-$" dockerhub-orgs-data/*.tsv | wc -l)
+          # Count only non-empty lines to avoid counting trailing newlines
+          total_programs=$(grep -c '.' dockerhub-orgs-data/*.tsv | awk -F: '{s+=$2} END{print s}')
+          # Only match DockerHub URLs in column 2 (tab-separated)
+          mapped_orgs=$(grep -cP '\thttps://hub\.docker\.com/u/' dockerhub-orgs-data/*.tsv | awk -F: '{s+=$2} END{print s}')
+          # Match tab + literal '?' + end-of-line to avoid false matches in program URLs
+          todo_count=$(grep -cP $'\t\?$' dockerhub-orgs-data/*.tsv | awk -F: '{s+=$2} END{print s}')
+          not_found=$(grep -cP $'\t-$' dockerhub-orgs-data/*.tsv | awk -F: '{s+=$2} END{print s}')
 
           echo "- **Total Programs**: $total_programs" >> $GITHUB_STEP_SUMMARY
           echo "- **Mapped Organizations**: $mapped_orgs" >> $GITHUB_STEP_SUMMARY
           echo "- **TODO (needs research)**: $todo_count" >> $GITHUB_STEP_SUMMARY
           echo "- **Not Found**: $not_found" >> $GITHUB_STEP_SUMMARY
 
-          if [ $mapped_orgs -gt 0 ]; then
+          if [ "$total_programs" -gt 0 ] && [ "$mapped_orgs" -gt 0 ]; then
             coverage=$((mapped_orgs * 100 / total_programs))
             echo "- **Coverage**: ${coverage}%" >> $GITHUB_STEP_SUMMARY
           fi

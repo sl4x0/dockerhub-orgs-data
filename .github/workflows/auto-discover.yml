@@ -32,10 +32,18 @@ jobs:
 
       - name: Auto-discover DockerHub usernames
         run: |
-          echo "🐳 Auto-discovering DockerHub usernames for programs marked with '?'"
-          echo "📊 Max discoveries: ${{ github.event.inputs.max_discoveries || 100 }}"
-          echo "🔧 Method: Smart variations + API verification"
-          python3 actions/auto_discover.py ${{ github.event.inputs.max_discoveries || 100 }}
+          MAX="${{ github.event.inputs.max_discoveries || 100 }}"
+
+          # Validate input: must be a positive integer
+          if [[ ! "$MAX" =~ ^[0-9]+$ ]] || [ "$MAX" -le 0 ]; then
+            echo "Invalid max_discoveries value: '$MAX' — using default 100"
+            MAX=100
+          fi
+
+          echo "Auto-discovering DockerHub usernames for programs marked with '?'"
+          echo "Max discoveries: $MAX"
+          echo "Method: Exact match + separator-removal variants (low false-positive mode)"
+          python3 actions/auto_discover.py "$MAX"
         continue-on-error: false
 
       - name: Generate statistics
