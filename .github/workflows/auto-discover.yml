@@ -11,7 +11,7 @@ on:
       max_discoveries:
         description: "Max programs to auto-discover (default 100; use 2000+ for a bulk catchup run)"
         required: false
-        default: "100"
+        default: "5000"
 
 permissions:
   contents: write
