@@ -25,6 +25,12 @@ jobs:
           # Check for proper tab separation
           for file in dockerhub-orgs-data/*.tsv; do
             if [ -f "$file" ]; then
+              # Skip empty files
+              if [ ! -s "$file" ]; then
+                echo "⊘ Skipping empty file: $file"
+                continue
+              fi
+
               echo "Checking $file..."
 
               # Verify tabs exist

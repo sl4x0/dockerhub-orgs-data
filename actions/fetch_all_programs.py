@@ -191,7 +191,7 @@ def extract_programs_federacy(data: list) -> List[Tuple[str, str]]:
     return programs
 
 
-def extract_programs_chaos(data: object) -> List[Tuple[str, str]]:
+def extract_programs_chaos(data) -> List[Tuple[str, str]]:
     """Extract programs from Chaos (ProjectDiscovery) data"""
     programs = []
 
@@ -215,7 +215,7 @@ def extract_programs_chaos(data: object) -> List[Tuple[str, str]]:
     return programs
 
 
-def extract_programs_diodb(data: object) -> List[Tuple[str, str]]:
+def extract_programs_diodb(data) -> List[Tuple[str, str]]:
     """Extract programs from diodb (disclose.io) data.
 
     The diodb program-list.json is a TOP-LEVEL ARRAY (not a dict with 'programs').

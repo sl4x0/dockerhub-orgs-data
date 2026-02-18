@@ -25,9 +25,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
-        run: pip install -r actions/requirements.txt
-
       - name: Fetch and update programs
         run: |
           echo "🔄 Fetching bug bounty programs from ALL sources..."
