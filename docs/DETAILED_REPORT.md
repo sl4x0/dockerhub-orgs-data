@@ -1,6 +1,6 @@
 # DockerHub Organizations - Detailed Report
 
-Last updated: 2026-02-20 04:44:07 UTC
+Last updated: 2026-02-21 04:24:39 UTC
 
 ## Programs by Platform
 
@@ -2855,6 +2855,7 @@ Last updated: 2026-02-20 04:44:07 UTC
 | https://hackerone.com/revive_adserver | ? |
 | https://hackerone.com/ro | ? |
 | https://hackerone.com/robinhood_markets | https://hub.docker.com/u/robinhoodmarkets |
+| https://hackerone.com/rocket_chat | ? |
 | https://hackerone.com/roke_vdp | ? |
 | https://hackerone.com/sega | https://hub.docker.com/u/sega |
 | https://hackerone.com/servicenow-disclosure | ? |
