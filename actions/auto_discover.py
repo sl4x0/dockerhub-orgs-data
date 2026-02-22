@@ -186,19 +186,39 @@ def discover_dockerhub_for_program(program_url: str) -> str:
         url, status = gemini_discover.discover_dockerhub(
             program_url,
             verify_fn=check_dockerhub_user,
+            company_hint=company_name,
         )
         if url is not None:
             return url
         if status == 'daily_dead':
             print("  All keys daily-dead — retry tomorrow")
+            return '?'
         elif status == 'max_wait':
             print("  Max wait time exceeded — leaving as '?' to retry")
+            return '?'
         elif status == 'not_found':
-            print("  Gemini: no DockerHub org found for this program")
+            print("  Gemini: no confident candidates — trying direct identifier check")
         else:
-            print(f"  Gemini: status={status} — leaving as '?'")
+            print(f"  Gemini: status={status} — trying direct identifier check")
     except Exception as e:
-        print(f"  Gemini exception: {str(e)[:120]}")
+        print(f"  Gemini exception: {str(e)[:120]} — trying direct identifier check")
+
+    # ------------------------------------------------------------------ #
+    # Direct identifier check: if Gemini gave up / returned [], try the   #
+    # extracted company name verbatim on DockerHub.  Catches cases like   #
+    # 'comcast-mbb' → Gemini unsure → direct check 'comcast' → FOUND.    #
+    # ------------------------------------------------------------------ #
+    if company_name and len(company_name) >= 2:
+        print(f"    [Direct] Checking '{company_name}' on DockerHub …", end=' ', flush=True)
+        result = check_dockerhub_user(company_name)
+        if result is True:
+            url = f"https://hub.docker.com/u/{company_name}"
+            print(f"CONFIRMED")
+            return url
+        elif result is False:
+            print("not found")
+        else:
+            print("error (skipping)")
 
     return '?'
 

@@ -209,7 +209,7 @@ def _parse_429(body: str) -> Tuple[bool, int]:
     return is_daily, delay
 
 
-def _call_gemini(prompt_url: str) -> Tuple[Optional[List[str]], str]:
+def _call_gemini(prompt_url: str, company_hint: str = "") -> Tuple[Optional[List[str]], str]:
     """Send prompt to Gemini; block/sleep until keys unthrottle.
 
     Returns:
@@ -221,9 +221,13 @@ def _call_gemini(prompt_url: str) -> Tuple[Optional[List[str]], str]:
     if not _keys:
         return None, 'no_keys'
 
+    user_text = f"Bug bounty program URL: {prompt_url}"
+    if company_hint:
+        user_text += f"\nExtracted company identifier: {company_hint}"
+
     payload = json.dumps({
         "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-        "contents": [{"role": "user", "parts": [{"text": f"Bug bounty program URL: {prompt_url}"}]}],
+        "contents": [{"role": "user", "parts": [{"text": user_text}]}],
         "generationConfig": {
             "responseMimeType": "application/json",
             "temperature": 0.05,   # near-deterministic; we want factual recall
@@ -323,6 +327,7 @@ def _call_gemini(prompt_url: str) -> Tuple[Optional[List[str]], str]:
 def discover_dockerhub(
     program_url: str,
     verify_fn=None,
+    company_hint: str = "",
 ) -> Tuple[Optional[str], str]:
     """Ask Gemini for DockerHub candidates and verify each against the API.
 
@@ -333,9 +338,12 @@ def discover_dockerhub(
       - Gemini responded but confirmed no DockerHub presence
 
     Args:
-        program_url: Bug bounty program URL.
-        verify_fn:   callable(username) -> Optional[bool].
-                     True = exists, False = 404, None = transient error.
+        program_url:  Bug bounty program URL.
+        verify_fn:    callable(username) -> Optional[bool].
+                      True = exists, False = 404, None = transient error.
+        company_hint: Clean company name extracted from the URL slug (e.g.
+                      'comcast' for 'comcast-mbb').  Included in the prompt
+                      so Gemini can resolve ambiguous slugs correctly.
 
     Returns:
         (url, status)  where url is hub.docker.com/u/<name> or None.
@@ -351,7 +359,7 @@ def discover_dockerhub(
         verify_fn = _default_verify
 
     print(f"    [Gemini] Querying AI …")
-    candidates, status = _call_gemini(program_url)
+    candidates, status = _call_gemini(program_url, company_hint)
 
     if status != 'ok':
         return None, status
