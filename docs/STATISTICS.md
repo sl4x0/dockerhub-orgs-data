@@ -1,6 +1,6 @@
 # DockerHub Organizations Statistics
 
-Last updated: 2026-02-21 (UTC)
+Last updated: 2026-02-22 (UTC)
 
 ## Overview
 
