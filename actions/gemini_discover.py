@@ -183,7 +183,7 @@ def _wait_for_any_key(spent_waiting: float) -> Tuple[bool, float]:
         remaining = MAX_TOTAL_WAIT_SECONDS - spent_waiting
         if remaining <= 0:
             print(f"    [Gemini] Max wait time reached ({MAX_TOTAL_WAIT_SECONDS}s) — leaving as '?'")
-            return False, spent_waiting
+            return False, MAX_TOTAL_WAIT_SECONDS  # signal caller: cap hit
         sleep = remaining
 
     print(f"    [Gemini] All keys throttled — sleeping {int(sleep)}s …", flush=True)
@@ -310,14 +310,31 @@ def _call_gemini(prompt_url: str, company_hint: str = "") -> Tuple[Optional[List
                     except json.JSONDecodeError:
                         result = []
                 else:
-                    # Grounded mode: extract last JSON array from possibly verbose text
-                    match = re.search(r'(\[[\s\S]*?\])', text)
+                    # Grounded mode: extract the LAST valid JSON array from the
+                    # response text.  Gemini grounding adds citation markers like
+                    # [1], [2] BEFORE the final answer, so we must take the last
+                    # parseable [...] block, not the first.
+                    # Only accept arrays where ALL elements are strings — citation
+                    # markers like [1] are valid JSON but contain integers, not
+                    # DockerHub usernames.
                     result = []
-                    if match:
+                    for m in re.finditer(r'(\[[^\[\]]*\])', text):
                         try:
-                            result = json.loads(match.group(1))
+                            parsed = json.loads(m.group(1))
+                            if isinstance(parsed, list) and all(isinstance(x, str) for x in parsed):
+                                result = parsed   # keep updating — last valid wins
                         except json.JSONDecodeError:
                             pass
+                    # Also try full multiline array in case answer spans lines
+                    if not result:
+                        m2 = re.search(r'(\[[\s\S]*?\])', text)
+                        if m2:
+                            try:
+                                parsed2 = json.loads(m2.group(1))
+                                if isinstance(parsed2, list) and all(isinstance(x, str) for x in parsed2):
+                                    result = parsed2
+                            except json.JSONDecodeError:
+                                pass
                 candidates = [str(c).strip().lower() for c in result if c] \
                              if isinstance(result, list) else []
                 return candidates, 'ok'

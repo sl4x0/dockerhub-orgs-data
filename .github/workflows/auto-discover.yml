@@ -24,7 +24,7 @@ concurrency:
 jobs:
   auto-discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 180 # 3 hours max for large discoveries
+    timeout-minutes: 480 # 8 hours max — enough for 5000+ programs with rate-limit sleeps
 
     steps:
       - name: Checkout code
@@ -42,7 +42,7 @@ jobs:
           # Comma-separated list of Gemini API keys for AI-powered discovery.
           # Add keys in repo Settings -> Secrets -> GEMINI_API_KEYS.
           # Multiple keys are rotated automatically to handle per-minute rate limits.
-          # Falls back to fuzzy matching if no keys are set.
+          # Script exits with error if this secret is not set.
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           MAX="${{ github.event.inputs.max_discoveries || 100 }}"
@@ -57,9 +57,9 @@ jobs:
           echo "Max discoveries: $MAX"
           if [ -n "${GEMINI_API_KEYS}" ]; then
             KEY_COUNT=$(echo "${GEMINI_API_KEYS}" | tr ',' '\n' | grep -c .)
-            echo "Strategy: Gemini AI ($KEY_COUNT key(s)) + fuzzy fallback"
+            echo "Strategy: Gemini AI ($KEY_COUNT key(s)) with Google Search grounding"
           else
-            echo "Strategy: Fuzzy matching (no GEMINI_API_KEYS secret set)"
+            echo "ERROR: GEMINI_API_KEYS secret is not set — workflow will fail"
           fi
           python3 actions/auto_discover.py "$MAX"
         continue-on-error: false
