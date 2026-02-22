@@ -64,13 +64,20 @@ You are an expert security researcher specialising in container-image
 reconnaissance for bug bounty programs.  Your ONLY job is to map a bug
 bounty program URL to its official DockerHub organisation(s).
 
+You have access to Google Search — USE IT to verify current DockerHub
+presence before answering.  Search for things like:
+  "<company name> docker hub"
+  "hub.docker.com/u/<candidate>"
+  "<company name> container registry"
+Only include a username if your search CONFIRMS it exists on hub.docker.com.
+
 OUTPUT FORMAT
-• Return a valid JSON array of strings — nothing else.
-• No markdown fences, no prose, no keys, no explanation.
-• Empty array [] if you have no confident answer.
+• Return a valid JSON array of strings — nothing else, no markdown, no prose.
+• The VERY LAST line of your response must be the JSON array and nothing else.
+• Empty array [] if you cannot confirm any DockerHub org after searching.
 
 CANDIDATE RULES
-1. Include ONLY usernames you are CONFIDENT exist on hub.docker.com.
+1. Include ONLY usernames CONFIRMED to exist on hub.docker.com via search.
    Do NOT guess, hallucinate, or invent names you are unsure about.
 2. Order by confidence — most likely first.
 3. Maximum 8 candidates.
@@ -80,18 +87,17 @@ CANDIDATE RULES
 6. For large tech companies include their well-known sub-orgs:
    • Google  → google, googlecloudplatform, googlesamples, kubernetes, tensorflow
    • AWS     → amazon, amazonlinux, aws-cli
-   • MS      → microsoft, mcr.microsoft.com images use "library" on DH
+   • MS      → microsoft
    • Meta    → meta, pytorch
 7. The URL may be a bug-bounty platform handle OR a company's own domain.
-   Extract the company name from either.
+   Use the extracted company identifier as your primary search term.
 
 QUALITY OVER QUANTITY — a short correct list beats a long speculative one.
 
-Example outputs:
+Example final-line outputs:
   ["shopify"]
   ["gitlab", "gitlab-org"]
   ["google", "googlecloudplatform", "googlesamples", "kubernetes", "tensorflow"]
-  ["aiven", "aivenoy"]
   []
 """
 
@@ -225,19 +231,32 @@ def _call_gemini(prompt_url: str, company_hint: str = "") -> Tuple[Optional[List
     if company_hint:
         user_text += f"\nExtracted company identifier: {company_hint}"
 
-    payload = json.dumps({
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-        "contents": [{"role": "user", "parts": [{"text": user_text}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "temperature": 0.05,   # near-deterministic; we want factual recall
-            "maxOutputTokens": 512,
-        },
+    _contents  = [{"role": "user", "parts": [{"text": user_text}]}]
+    _sysinstruct = {"parts": [{"text": SYSTEM_PROMPT}]}
+    _genconf_base = {"temperature": 0.0, "maxOutputTokens": 1024}
+
+    # Primary payload: Google Search grounding enabled.
+    # responseMimeType must NOT be set when tools are active.
+    payload_grounded = json.dumps({
+        "system_instruction": _sysinstruct,
+        "contents": _contents,
+        "tools": [{"google_search": {}}],
+        "generationConfig": _genconf_base,
     }).encode()
+
+    # Fallback payload: no tools (for models that reject google_search with 400).
+    # Use responseMimeType=application/json so the output is clean JSON.
+    payload_plain = json.dumps({
+        "system_instruction": _sysinstruct,
+        "contents": _contents,
+        "generationConfig": {**_genconf_base, "responseMimeType": "application/json"},
+    }).encode()
+
+    # Track which (key, model) combos have already been tried in plain mode
+    tried_plain: set = set()
 
     tried:          set   = set()          # (key, model) pairs already attempted
     spent_waiting:  float = 0.0
-    total_combos:   int   = len(_keys) * len(MODELS)
 
     while True:
         # ——— check if we've tried every combo ———
@@ -273,15 +292,32 @@ def _call_gemini(prompt_url: str, company_hint: str = "") -> Tuple[Optional[List
                 f"https://generativelanguage.googleapis.com/v1beta/models/"
                 f"{model}:generateContent?key={key}"
             )
+            # Choose grounded payload; fall back to plain if model rejected tools
+            use_plain   = (key, model) in tried_plain
+            active_payload = payload_plain if use_plain else payload_grounded
             req = urllib.request.Request(
-                api_url, data=payload, method="POST",
+                api_url, data=active_payload, method="POST",
                 headers={"Content-Type": "application/json", **HEADERS},
             )
             try:
                 with urllib.request.urlopen(req, timeout=30) as r:
                     data = json.loads(r.read().decode())
-                text   = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                result = json.loads(text)
+                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if use_plain:
+                    # Plain mode: response is pure JSON
+                    try:
+                        result = json.loads(text)
+                    except json.JSONDecodeError:
+                        result = []
+                else:
+                    # Grounded mode: extract last JSON array from possibly verbose text
+                    match = re.search(r'(\[[\s\S]*?\])', text)
+                    result = []
+                    if match:
+                        try:
+                            result = json.loads(match.group(1))
+                        except json.JSONDecodeError:
+                            pass
                 candidates = [str(c).strip().lower() for c in result if c] \
                              if isinstance(result, list) else []
                 return candidates, 'ok'
@@ -298,6 +334,12 @@ def _call_gemini(prompt_url: str, company_hint: str = "") -> Tuple[Optional[List
                         _park_key(key, delay)
                     rotated = True
                     break  # rotate to next key
+                elif e.code == 400 and not use_plain:
+                    # Model rejected google_search tool — retry without grounding
+                    print(f"    [Gemini] {model} no grounding support — retrying plain")
+                    tried_plain.add((key, model))
+                    tried.discard((key, model))  # allow re-try in plain mode
+                    continue
                 elif e.code == 404:
                     # Model not available on this project — try next model
                     continue
