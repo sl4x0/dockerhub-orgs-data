@@ -16,10 +16,10 @@ A comprehensive, fully-automated database connecting **1,882+ bug bounty program
 
 | Metric                             | Count       |
 | ---------------------------------- | ----------- |
-| **Total Bug Bounty Programs**      | 3,332       |
-| **Mapped DockerHub Organizations** | 953         |
-| **Coverage**                       | 28.6%       |
-| **TODO (Needs Research)**          | 2,379       |
+| **Total Bug Bounty Programs**      | 3,326       |
+| **Mapped DockerHub Organizations** | 33         |
+| **Coverage**                       | 1.0%       |
+| **TODO (Needs Research)**          | 3,293       |
 | **Data Sources**                   | 8 platforms |
 
 _Last automated update: 2026-02-22 UTC_
