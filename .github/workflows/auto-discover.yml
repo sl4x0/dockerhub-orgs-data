@@ -38,6 +38,12 @@ jobs:
           python-version: "3.11"
 
       - name: Auto-discover DockerHub usernames
+        env:
+          # Comma-separated list of Gemini API keys for AI-powered discovery.
+          # Add keys in repo Settings -> Secrets -> GEMINI_API_KEYS.
+          # Multiple keys are rotated automatically to handle per-minute rate limits.
+          # Falls back to fuzzy matching if no keys are set.
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           MAX="${{ github.event.inputs.max_discoveries || 100 }}"
 
@@ -49,7 +55,12 @@ jobs:
 
           echo "Auto-discovering DockerHub usernames for programs marked with '?'"
           echo "Max discoveries: $MAX"
-          echo "Method: Exact match + separator-removal variants (low false-positive mode)"
+          if [ -n "${GEMINI_API_KEYS}" ]; then
+            KEY_COUNT=$(echo "${GEMINI_API_KEYS}" | tr ',' '\n' | grep -c .)
+            echo "Strategy: Gemini AI ($KEY_COUNT key(s)) + fuzzy fallback"
+          else
+            echo "Strategy: Fuzzy matching (no GEMINI_API_KEYS secret set)"
+          fi
           python3 actions/auto_discover.py "$MAX"
         continue-on-error: false
 

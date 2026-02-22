@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 """
 Auto-discover DockerHub usernames for programs marked with '?'
-Uses direct API verification with conservative, low-false-positive variations.
 
-False positive reduction strategy:
-  - Only 4 variations are tested (all derived from the exact program identifier):
-      1. Exact match
-      2. Hyphens removed
-      3. Underscores removed
-      4. All separators removed
-  - Split-name parts (e.g. "corp" from "example-corp") are NOT tested — too generic.
-  - Suffix guesses (hq, inc, io, team) are NOT tested — too speculative.
-  - Network errors / rate-limits return None and are skipped, never treated as "not found".
+Discovery engine — Gemini AI
+------------------------------
+Uses Gemini's world-knowledge to identify a company's official DockerHub
+org name(s) from its bug bounty URL.  Gemini is far more accurate than any
+heuristic — especially for diodb company-website entries where the URL
+gives little domain signal.
+
+Rate-limit behaviour
+---------------------
+When all API keys are temporarily throttled the code SLEEPS until the
+earliest key unblocks.  No program is ever skipped due to a per-minute
+rate limit.  Keys are only permanently dropped on daily exhaustion
+("limit: 0"), in which case the program stays '?' for today and will be
+retried on the next daily run.
+
+Requires GEMINI_API_KEYS env var (comma-separated list of API keys).
 """
 
+import os
 import sys
 import time
 import urllib.request
@@ -22,6 +29,13 @@ import urllib.parse
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import re
+
+# Gemini AI discovery module (same package)
+try:
+    import gemini_discover
+    _GEMINI_AVAILABLE = True
+except ImportError:
+    _GEMINI_AVAILABLE = False
 
 
 # Domains and path segments to strip when extracting the program identifier.
@@ -52,7 +66,7 @@ SKIP_PATH_PARTS: frozenset = frozenset({
 })
 
 HEADERS = {
-    'User-Agent': 'dockerhub-orgs-data/1.0 (https://github.com/sl4x0/dockerhub-orgs-data)'
+    'User-Agent': 'dockerhub-orgs-data/2.0 (https://github.com/sl4x0/dockerhub-orgs-data)'
 }
 
 
@@ -146,71 +160,45 @@ def extract_company_name(url: str) -> str:
     return ''
 
 
-def extract_potential_usernames(url: str) -> List[str]:
-    """Return low-false-positive DockerHub username candidates for a program URL.
-
-    Only produces variations that are direct transformations of the program
-    identifier — no split-parts, no suffix guesses.
-    """
-    company = extract_company_name(url)
-    if not company or len(company) < 2:
-        return []
-
-    candidates = [
-        company,                                   # 1. exact
-        company.replace('-', ''),                  # 2. no hyphens
-        company.replace('_', ''),                  # 3. no underscores
-        company.replace('-', '').replace('_', ''), # 4. no separators
-    ]
-
-    seen: set = set()
-    unique: List[str] = []
-    for c in candidates:
-        if c not in seen and len(c) >= 2 and c.replace('-', '').replace('_', '').isalnum():
-            seen.add(c)
-            unique.append(c)
-
-    return unique
-
-
 def discover_dockerhub_for_program(program_url: str) -> str:
-    """Try to discover DockerHub username for a program.
+    """Discover DockerHub username for a program using Gemini AI.
 
-    Returns the full hub.docker.com URL on success, '?' if not found,
-    or '?' if all API calls returned transient errors (safe — leaves '?' in place).
+    Blocks/sleeps when API keys are throttled — no program is skipped due
+    to a per-minute rate limit.  Returns '?' only when Gemini definitively
+    has no answer or all keys are daily-dead.
+
+    Returns:
+        Full hub.docker.com/u/<username> URL, or '?' if not found.
     """
     print(f"\n  Searching: {program_url}")
-
     company_name = extract_company_name(program_url)
-    print(f"  Identifier: {company_name}")
+    print(f"  Identifier: {company_name or '(company website)'}")
 
-    variations = extract_potential_usernames(program_url)
-    total = len(variations)
+    if not _GEMINI_AVAILABLE:
+        print("  [ERROR] gemini_discover module not found — cannot discover")
+        return '?'
 
-    transient_errors = 0
+    if not gemini_discover.has_live_keys():
+        print("  [SKIP] All Gemini keys are daily-dead — leaving as '?'")
+        return '?'
 
-    for idx, variant in enumerate(variations, 1):
-        print(f"    [{idx}/{total}] {variant}...", end=' ', flush=True)
-
-        result = check_dockerhub_user(variant)
-
-        if result is True:
-            print("FOUND")
-            time.sleep(0.5)
-            return f"https://hub.docker.com/u/{variant}"
-        elif result is False:
-            print("not found")
-            time.sleep(0.3)
+    try:
+        url, status = gemini_discover.discover_dockerhub(
+            program_url,
+            verify_fn=check_dockerhub_user,
+        )
+        if url is not None:
+            return url
+        if status == 'daily_dead':
+            print("  All keys daily-dead — retry tomorrow")
+        elif status == 'max_wait':
+            print("  Max wait time exceeded — leaving as '?' to retry")
+        elif status == 'not_found':
+            print("  Gemini: no DockerHub org found for this program")
         else:
-            # Transient error (rate-limit / network)
-            print("error (skipping)")
-            transient_errors += 1
-            time.sleep(1.0)
-
-    if transient_errors == total:
-        print("  All checks hit errors — leaving as '?' to retry later")
-    else:
-        print("  No DockerHub organization found")
+            print(f"  Gemini: status={status} — leaving as '?'")
+    except Exception as e:
+        print(f"  Gemini exception: {str(e)[:120]}")
 
     return '?'
 
@@ -286,10 +274,27 @@ def main():
         print(f"Error: Data directory not found: {data_dir}")
         return 1
 
+    # ------------------------------------------------------------------ #
+    # Load Gemini keys (GitHub Actions passes GEMINI_API_KEYS secret)      #
+    # ------------------------------------------------------------------ #
+    if not _GEMINI_AVAILABLE:
+        print("ERROR: gemini_discover module not found in actions/. Cannot run.")
+        return 1
+
+    raw_keys = os.environ.get("GEMINI_API_KEYS", "") or os.environ.get("GEMINI_API_KEY", "")
+    keys = [k.strip() for k in re.split(r"[,\n]+", raw_keys) if k.strip()]
+    if not keys:
+        print("ERROR: GEMINI_API_KEYS environment variable not set.")
+        print("       Set it to a comma-separated list of Gemini API keys.")
+        return 1
+
+    gemini_discover.set_keys(keys)
+    print(f"Gemini AI ready: {len(keys)} key(s) loaded")
+
     print("=" * 70)
     print(f"AUTO-DISCOVERING DOCKERHUB USERNAMES (max: {max_count})")
     print("=" * 70)
-    print("Strategy: Exact match + separator-removal variants (low false-positive mode)")
+    print("Strategy: Gemini AI (world-knowledge based, waits on rate limits)")
     print("=" * 70)
 
     try:
@@ -347,6 +352,7 @@ def main():
             f.write(f"**Found**: {found_count} DockerHub organizations\n")
             f.write(f"**Success Rate**: {rate}%\n")
             f.write(f"**Elapsed Time**: {int(elapsed)} seconds\n")
+            f.write(f"**Engine**: Gemini AI\n")
 
             if found_count > 0:
                 f.write("\n### Discoveries\n\n")
@@ -363,7 +369,7 @@ def main():
     total = len(programs)
     rate = round(found_count * 100 / total, 1) if total else 0
     print(f"DISCOVERY COMPLETE!")
-    print(f"Found: {found_count}/{total} ({rate}%)")
+    print(f"Found: {found_count}/{total} ({rate}%) via Gemini AI")
     print(f"Time: {int(elapsed)} seconds")
     print("=" * 70)
 

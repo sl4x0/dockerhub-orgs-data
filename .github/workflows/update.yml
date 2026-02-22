@@ -39,6 +39,8 @@ jobs:
       - name: Immediately discover DockerHub orgs for new programs
         # Runs right after fetch so newly added programs don't sit as '?' for a full day.
         # Batch of 75: fast enough for a daily job (~3 min), covers most new additions.
+        env:
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           echo "🐳 Running immediate discovery for newly added programs..."
           python3 actions/auto_discover.py 75

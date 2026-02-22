@@ -76,6 +76,10 @@ htmlcov/
 # CI/CD local runs
 .github/workflows/*.local.yml
 
+# Gemini test file (may contain API keys — never commit)
+test_gemini.py
+gemini_test*.py
+
 # Personal notes & scratch files
 NOTES.md
 TODO.md
