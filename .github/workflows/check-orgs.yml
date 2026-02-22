@@ -1,0 +1,183 @@
+name: Check DockerHub Organizations
+
+on:
+  schedule:
+    # Run weekly on Sunday at 07:00 UTC — after the week's daily discovery runs
+    # have all completed, giving the most up-to-date snapshot of mapped orgs.
+    - cron: "0 7 * * 0"
+  workflow_dispatch: # Allow manual trigger any time
+
+permissions:
+  contents: write
+  issues: write
+
+# Only one org-check at a time; don't cancel a running check (it's slow).
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  check-orgs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60 # ~1500 orgs × 0.5 s each ≈ 12 min; 60 min is safe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run org validation
+        id: check
+        run: |
+          echo "🔍 Checking all mapped DockerHub organizations..."
+
+          # Run check_orgs.py — exits 0 (all OK) or 1 (some missing).
+          # Capture full output; continue even if missing orgs found.
+          python3 actions/check_orgs.py 2>&1 | tee check_orgs_output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract confirmed-missing orgs (lines containing "NOT FOUND")
+          grep "NOT FOUND" check_orgs_output.txt \
+            | sed 's/Checking: //' \
+            | sed 's/\.\.\. NOT FOUND//' \
+            | tr -d ' ' \
+            > confirmed_missing.txt || true
+
+          MISSING_COUNT=$(wc -l < confirmed_missing.txt | tr -d ' ')
+          echo "missing_count=$MISSING_COUNT" >> "$GITHUB_OUTPUT"
+
+          echo ""
+          echo "✅ Check complete — $MISSING_COUNT confirmed missing org(s)"
+          # Always succeed at this step; the issue-creation step handles missing orgs.
+          exit 0
+        continue-on-error: false
+
+      - name: Mark missing orgs in TSV files
+        if: steps.check.outputs.missing_count != '0'
+        run: |
+          if [ ! -s confirmed_missing.txt ]; then
+            echo "No confirmed missing orgs — nothing to update"
+            exit 0
+          fi
+
+          echo "Updating TSV files: replacing gone organisations with '-'..."
+          while IFS= read -r org; do
+            [ -z "$org" ] && continue
+            # Safety: only process alphanumeric org names
+            if [[ ! "$org" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+              echo "⚠ Skipping suspicious org name: $org"
+              continue
+            fi
+            DOCKER_URL="https://hub.docker.com/u/${org}"
+            # Replace confirmed-gone org URL with '-' in every TSV file
+            for f in dockerhub-orgs-data/*.tsv; do
+              if grep -qF "$DOCKER_URL" "$f"; then
+                sed -i "s|${DOCKER_URL}|-|g" "$f"
+                echo "  Marked $org as gone in $(basename $f)"
+              fi
+            done
+          done < confirmed_missing.txt
+
+      - name: Regenerate statistics after marking
+        if: steps.check.outputs.missing_count != '0'
+        run: python3 actions/generate_stats.py
+        continue-on-error: true
+
+      - name: Commit changes
+        if: steps.check.outputs.missing_count != '0'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add dockerhub-orgs-data/*.tsv docs/STATISTICS.md README.md
+
+          if git diff --staged --quiet; then
+            echo "No staged changes after marking missing orgs"
+          else
+            GONE=$(wc -l < confirmed_missing.txt | tr -d ' ')
+            git commit -m "Weekly check: Mark $GONE gone DockerHub org(s) as '-'"
+            git push
+            echo "✅ TSV files updated"
+          fi
+
+      - name: Create or update GitHub issue for missing orgs
+        if: steps.check.outputs.missing_count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync('confirmed_missing.txt')) return;
+
+            const raw = fs.readFileSync('confirmed_missing.txt', 'utf8').trim();
+            const orgs = raw.split('\n').map(o => o.trim()).filter(Boolean);
+            if (orgs.length === 0) return;
+
+            const ISSUE_TITLE = '⚠️ DockerHub Organizations No Longer Found (HTTP 404)';
+            const today = new Date().toISOString().split('T')[0];
+
+            const body = [
+              `The weekly org-check detected **${orgs.length}** DockerHub organization(s) that returned HTTP 404 on **${today}**:`,
+              '',
+              orgs.map(o => `- [\`${o}\`](https://hub.docker.com/u/${o})`).join('\n'),
+              '',
+              'These have been automatically marked as \`-\` (not found) in the TSV files.',
+              'Possible causes: deleted, renamed, or made private.',
+              '',
+              '**Action required**: Verify whether the bug bounty program moved their Docker images to a new org, and update the TSV file accordingly.',
+            ].join('\n');
+
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'automated,needs-verification',
+              per_page: 50,
+            });
+
+            const existing = openIssues.find(i => i.title === ISSUE_TITLE);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `**Weekly re-check (${today}) found ${orgs.length} missing org(s):**\n\n${orgs.map(o => `- \`${o}\``).join('\n')}`,
+              });
+              core.info(`Updated issue #${existing.number}`);
+            } else {
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: ISSUE_TITLE,
+                body,
+                labels: ['automated', 'needs-verification'],
+              });
+              core.info(`Created issue #${issue.number}`);
+            }
+
+      - name: Post summary
+        if: always()
+        run: |
+          MISSING="${{ steps.check.outputs.missing_count }}"
+          echo "## 🔍 Weekly Org Check Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f check_orgs_output.txt ]; then
+            CONFIRMED=$(grep -c "NOT FOUND" check_orgs_output.txt || echo "0")
+            CONFIRMED=$(echo "$CONFIRMED" | tr -d ' ')
+            OK=$(grep -c "OK$" check_orgs_output.txt || echo "0")
+            OK=$(echo "$OK" | tr -d ' ')
+            ERRORS=$(grep -c "ERROR (skipped)" check_orgs_output.txt || echo "0")
+            ERRORS=$(echo "$ERRORS" | tr -d ' ')
+            echo "| Status | Count |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ✅ Confirmed OK | $OK |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ❌ Gone (404) | $CONFIRMED |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ⚠️ Transient errors | $ERRORS |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Next scheduled run**: Sunday 07:00 UTC" >> "$GITHUB_STEP_SUMMARY"

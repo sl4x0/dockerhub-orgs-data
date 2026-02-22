@@ -10,6 +10,11 @@ permissions:
   contents: write
   issues: write
 
+# Cancel any in-progress run of the same workflow to prevent cascading commits.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -93,14 +98,17 @@ jobs:
 
           git add dockerhub-orgs-data/*.tsv
           git add docs/STATISTICS.md
+          git add README.md
 
           if git diff --staged --quiet; then
             echo "✅ No changes to commit"
           else
             # Count new program lines added
-            new_programs=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+http" || echo "0")
+            # NOTE: Use grep | wc -l (not grep -c) to avoid exit-code 1 on zero matches
+            # which caused `|| echo "0"` to fire producing "0 0" in the commit message.
+            new_programs=$(git diff --staged dockerhub-orgs-data/*.tsv | grep "^+http" | wc -l | tr -d ' ')
             # Count how many were immediately resolved to a DockerHub org
-            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -cP "^\+.*hub\.docker\.com" || echo "0")
+            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -P "^\+.*hub\.docker\.com" | wc -l | tr -d ' ')
 
             git commit -m "Daily update: Fetch latest bug bounty programs - New: $new_programs, Discovered: $discovered"
 

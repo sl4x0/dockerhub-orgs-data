@@ -10,6 +10,11 @@ on:
     paths:
       - "dockerhub-orgs-data/**/*.tsv"
 
+# Allow only one validation per workflow ref at a time; never cancel (all validations should complete).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -67,6 +72,39 @@ jobs:
           done
 
           echo "URL validation complete!"
+
+      - name: Check for duplicate program URLs
+        run: |
+          echo "Checking for duplicate program URLs..."
+          HAS_DUPES=0
+
+          # Within-file duplicates: fail hard — these indicate a data bug.
+          for file in dockerhub-orgs-data/*.tsv; do
+            if [ -f "$file" ] && [ -s "$file" ]; then
+              dupes=$(cut -f1 "$file" | sort | uniq -d)
+              if [ -n "$dupes" ]; then
+                echo "❌ Duplicate URLs found within $(basename $file):"
+                echo "$dupes" | sed 's/^/   /'
+                HAS_DUPES=1
+              fi
+            fi
+          done
+
+          # Cross-file duplicates: warn only — same program may legitimately appear
+          # on multiple platforms but we surface it for review.
+          all_urls=$(cat dockerhub-orgs-data/*.tsv 2>/dev/null | cut -f1 | sort)
+          cross_dupes=$(echo "$all_urls" | uniq -d)
+          if [ -n "$cross_dupes" ]; then
+            echo "⚠️  URLs appearing in more than one platform file (informational):"
+            echo "$cross_dupes" | sed 's/^/   /'
+          fi
+
+          if [ "$HAS_DUPES" -eq 1 ]; then
+            echo "❌ Within-file duplicates detected — please deduplicate before merging."
+            exit 1
+          fi
+
+          echo "✅ No within-file duplicates found."
 
       - name: Generate statistics
         run: |

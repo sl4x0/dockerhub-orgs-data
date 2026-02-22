@@ -14,15 +14,15 @@ A comprehensive, fully-automated database connecting **1,882+ bug bounty program
 
 ## 📊 Current Statistics
 
-| Metric                             | Count        |
-| ---------------------------------- | ------------ |
-| **Total Bug Bounty Programs**      | 1,882        |
-| **Mapped DockerHub Organizations** | 1,539        |
-| **Coverage**                       | 81.8%        |
-| **TODO (Needs Research)**          | 343          |
-| **Data Sources**                   | 8+ platforms |
+| Metric                             | Count       |
+| ---------------------------------- | ----------- |
+| **Total Bug Bounty Programs**      | 3,332       |
+| **Mapped DockerHub Organizations** | 953         |
+| **Coverage**                       | 28.6%       |
+| **TODO (Needs Research)**          | 2,379       |
+| **Data Sources**                   | 8 platforms |
 
-_Last automated update: Daily at 02:00 UTC_
+_Last automated update: 2026-02-22 UTC_
 
 ---
 
@@ -47,20 +47,21 @@ All data is maintained through GitHub Actions with zero manual intervention requ
 | -------------------- | --------------- | ---------------------------------------------------------------- |
 | **Update Programs**  | Daily 02:00 UTC | Fetches latest bug bounty programs from all platforms            |
 | **Auto-Discover**    | Daily 05:00 UTC | Discovers DockerHub usernames using intelligent pattern matching |
+| **Generate Reports** | Daily 06:00 UTC | Produces statistics and detailed analysis reports                |
 | **Validate Data**    | On every push   | Ensures data integrity and format compliance                     |
-| **Generate Reports** | Daily 04:50 UTC | Produces statistics and detailed analysis reports                |
 
 ### 🧠 Intelligent Discovery Algorithm
 
-The auto-discovery system uses multi-strategy pattern matching:
+The auto-discovery system uses a **low false-positive** strategy:
 
-1. **Direct Match** - Tests program name as-is
-2. **Normalization** - Removes hyphens, underscores, special characters
-3. **Pattern Variations** - Tests with common suffixes: `hq`, `inc`, `io`, `team`, `official`, `prod`, `docker`
-4. **Name Splitting** - Analyzes hyphenated names (e.g., `acme-corp` → `acme`, `corp`, `acmecorp`)
-5. **API Verification** - Validates each candidate against DockerHub's official API
+1. **Domain-Aware Extraction** - Detects whether a URL belongs to a known bug bounty platform (uses the URL path) or a company website (extracts the second-level domain)
+2. **Exact Match** - Tests the program identifier as-is
+3. **Separator Normalization** - Tests with hyphens removed, underscores removed, and both removed
+4. **API Verification** - Validates each candidate with a HEAD request to DockerHub's official API
 
-**Success Rate**: ~78% automatic discovery from just program URLs
+> Split-name parts (e.g., `corp` from `example-corp`) and suffix appends (`hq`, `inc`, `io`) are intentionally **not tested** to keep the false-positive rate near zero.
+
+**Coverage**: ~28% overall across all 8 platforms (diodb entries are company websites, harder to match automatically)
 
 ---
 
@@ -87,16 +88,16 @@ cd dockerhub-orgs-data
 
 Data is organized in TSV (Tab-Separated Values) files within [`dockerhub-orgs-data/`](dockerhub-orgs-data/):
 
-| File                                         | Platform               | Programs            |
-| -------------------------------------------- | ---------------------- | ------------------- |
-| `hackerone.tsv`                              | HackerOne              | ~456                |
-| `hackerone.external_program.tsv`             | HackerOne (External)   | ~457                |
-| `chaos.tsv`                                  | ProjectDiscovery Chaos | ~798                |
-| `intigriti.tsv`                              | Intigriti              | ~131                |
-| `federacy.tsv`                               | Federacy               | ~35                 |
-| `bugcrowd.external_program.tsv`              | Bugcrowd (External)    | ~5                  |
-| `yeswehack.external_program.tsv`             | YesWeHack              | ~1                  |
-| `bugcrowd.tsv`, `diodb.tsv`, `yeswehack.tsv` | -                      | Empty (in progress) |
+| File                             | Platform               | Programs |
+| -------------------------------- | ---------------------- | -------- |
+| `hackerone.tsv`                  | HackerOne (bounty)     | ~234     |
+| `hackerone.external_program.tsv` | HackerOne (VDPs)       | ~221     |
+| `chaos.tsv`                      | ProjectDiscovery Chaos | ~798     |
+| `diodb.tsv`                      | disclose.io (diodb)    | ~1,609   |
+| `bugcrowd.tsv`                   | Bugcrowd               | ~211     |
+| `intigriti.tsv`                  | Intigriti              | ~134     |
+| `yeswehack.external_program.tsv` | YesWeHack              | ~90      |
+| `federacy.tsv`                   | Federacy               | ~35      |
 
 ### Format Specification
 

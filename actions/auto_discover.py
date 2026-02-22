@@ -33,6 +33,24 @@ SKIP_PARTS = {
     'programs', 'program', 'engagements', 'www', 'company', 'app', 'bounty', 'security',
 }
 
+# Known bug bounty PLATFORM domains — for these we extract the program ID from the URL PATH.
+# Everything else is treated as a company website and the SLD (second-level domain) is used.
+PLATFORM_DOMAINS: frozenset = frozenset({
+    'hackerone.com', 'bugcrowd.com', 'vdp.bugcrowd.com',
+    'app.intigriti.com', 'intigriti.com',
+    'yeswehack.com', 'federacy.com', 'hackenproof.com', 'bugbase.io',
+    'bugrap.com', 'hatsfinance.io', 'whitehub.io',
+    'chaos.projectdiscovery.io', 'huntr.dev', 'bugbountyjp.com',
+})
+
+# Path segments that carry no program-identity information on platform URLs.
+SKIP_PATH_PARTS: frozenset = frozenset({
+    'programs', 'program', 'engagements', 'company', 'app', 'bounty',
+    'security', 'vulnerability-disclosure', 'responsible-disclosure',
+    'policy', 'legal', 'bug-bounty', 'bugbounty', 'security-policy', 'vdp',
+    'www', 'api', 'submit',
+})
+
 HEADERS = {
     'User-Agent': 'dockerhub-orgs-data/1.0 (https://github.com/sl4x0/dockerhub-orgs-data)'
 }
@@ -61,18 +79,71 @@ def check_dockerhub_user(username: str) -> Optional[bool]:
         return None
 
 
+def _is_platform_url(hostname: str) -> bool:
+    """Return True if hostname belongs to a known bug bounty platform."""
+    return hostname in PLATFORM_DOMAINS or any(
+        hostname == p or hostname.endswith('.' + p) for p in PLATFORM_DOMAINS
+    )
+
+
+def _extract_sld(hostname: str) -> str:
+    """Extract the second-level domain label from a hostname.
+
+    Examples:
+        'www.acme.com'       -> 'acme'
+        'api.example.co.uk'  -> 'example'
+        'google.com'         -> 'google'
+        'security.corp.io'   -> 'corp'
+    """
+    parts = hostname.split('.')
+    if len(parts) < 2:
+        return parts[0] if parts else ''
+
+    # Heuristic for 2-level TLDs (co.uk, com.br, etc.):
+    # If the second-to-last label is short AND not a well-known org-level TLD,
+    # skip it as part of the TLD.
+    known_single_tlds = {'com', 'org', 'net', 'gov', 'edu', 'mil', 'int',
+                         'io', 'ai', 'dev', 'app', 'cloud', 'tech', 'security'}
+    penultimate = parts[-2] if len(parts) >= 2 else ''
+    tld_levels = 1
+    if len(parts) >= 3 and len(penultimate) <= 3 and penultimate not in known_single_tlds:
+        tld_levels = 2  # treat as 2-level TLD (e.g. co.uk)
+
+    sld_idx = -(tld_levels + 1)
+    if abs(sld_idx) > len(parts):
+        sld_idx = -len(parts)
+    return parts[sld_idx]
+
+
 def extract_company_name(url: str) -> str:
-    """Extract the primary company/program identifier from a program URL."""
+    """Extract the primary company/program identifier from a program URL.
+
+    For known bug bounty platform URLs the identifier comes from the URL PATH
+    (e.g. https://hackerone.com/acme  ->  'acme').
+
+    For company website URLs (common in diodb) the identifier is the
+    second-level domain of the hostname
+    (e.g. https://www.acme.com/security/policy  ->  'acme').
+    """
     clean_url = url.lower().replace('https://', '').replace('http://', '')
     parts = clean_url.split('/')
+    hostname = parts[0] if parts else ''
 
-    for part in parts:
-        if part and part not in SKIP_PARTS:
-            clean = re.sub(r'[^a-z0-9\-_]', '', part)
-            if len(clean) >= 2:
-                return clean
+    if _is_platform_url(hostname):
+        # Platform URL — use meaningful path segments
+        for part in parts[1:]:
+            if part and part not in SKIP_PATH_PARTS:
+                clean = re.sub(r'[^a-z0-9\-_]', '', part)
+                if len(clean) >= 2:
+                    return clean
+    else:
+        # Company website — extract SLD from the hostname
+        sld = _extract_sld(hostname)
+        clean = re.sub(r'[^a-z0-9\-_]', '', sld)
+        if len(clean) >= 2:
+            return clean
 
-    return ""
+    return ''
 
 
 def extract_potential_usernames(url: str) -> List[str]:
@@ -81,33 +152,23 @@ def extract_potential_usernames(url: str) -> List[str]:
     Only produces variations that are direct transformations of the program
     identifier — no split-parts, no suffix guesses.
     """
-    clean_url = url.lower().replace('https://', '').replace('http://', '')
-    parts = clean_url.split('/')
+    company = extract_company_name(url)
+    if not company or len(company) < 2:
+        return []
 
-    variations: List[str] = []
+    candidates = [
+        company,                                   # 1. exact
+        company.replace('-', ''),                  # 2. no hyphens
+        company.replace('_', ''),                  # 3. no underscores
+        company.replace('-', '').replace('_', ''), # 4. no separators
+    ]
 
-    for part in parts:
-        if part and part not in SKIP_PARTS:
-            clean = re.sub(r'[^a-z0-9\-_]', '', part)
-            if len(clean) >= 2:
-                candidates = [
-                    clean,                                  # 1. exact
-                    clean.replace('-', ''),                 # 2. no hyphens
-                    clean.replace('_', ''),                 # 3. no underscores
-                    clean.replace('-', '').replace('_', ''), # 4. no separators
-                ]
-                for c in candidates:
-                    if c not in variations and len(c) >= 2 and c.replace('-', '').replace('_', '').isalnum():
-                        variations.append(c)
-                break  # Only use the first meaningful path segment
-
-    # Deduplicate while preserving order
     seen: set = set()
     unique: List[str] = []
-    for v in variations:
-        if v not in seen:
-            seen.add(v)
-            unique.append(v)
+    for c in candidates:
+        if c not in seen and len(c) >= 2 and c.replace('-', '').replace('_', '').isalnum():
+            seen.add(c)
+            unique.append(c)
 
     return unique
 

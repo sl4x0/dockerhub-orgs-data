@@ -16,6 +16,11 @@ on:
 permissions:
   contents: write
 
+# Cancel any in-progress discovery run so a manual trigger never duplicates work.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   auto-discover:
     runs-on: ubuntu-latest
@@ -61,14 +66,16 @@ jobs:
           # Add all changed TSV files and stats
           git add dockerhub-orgs-data/*.tsv
           git add docs/STATISTICS.md
+          git add README.md
 
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "✅ No new discoveries to commit"
             echo "no_changes=true" >> $GITHUB_ENV
           else
-            # Count discoveries
-            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep -c "^+.*hub.docker.com" || echo "0")
+            # Count discoveries — use grep | wc -l (not grep -c) to avoid exit-code 1
+            # on zero-match producing "0 0" via the old `|| echo "0"` fallback.
+            discovered=$(git diff --staged dockerhub-orgs-data/*.tsv | grep "^+.*hub.docker.com" | wc -l | tr -d ' ')
 
             echo "📝 Committing $discovered new discoveries"
             git commit -m "Auto-discover DockerHub organizations - Found: $discovered usernames"

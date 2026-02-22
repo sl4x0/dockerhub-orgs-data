@@ -7,9 +7,15 @@ on:
     paths:
       - "dockerhub-orgs-data/**/*.tsv"
   schedule:
-    # Run daily at 03:00 UTC (after update workflow)
-    - cron: "0 3 * * *"
+    # Run daily at 06:00 UTC — after update (02:00) and auto-discover (05:00) have
+    # both committed their changes so the report always reflects today's discoveries.
+    - cron: "0 6 * * *"
   workflow_dispatch:
+
+# Cancel any in-progress report run to avoid duplicate commits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   report:

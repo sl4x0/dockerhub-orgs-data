@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-Generate statistics and reports for dockerhub-orgs-data
+Generate statistics and reports for dockerhub-orgs-data.
+Also updates the README.md statistics table so it always reflects live data.
 """
 
+import re
 import sys
 import urllib.parse
 from datetime import datetime, timezone
@@ -126,9 +128,74 @@ def generate_report(stats, orgs):
     return "\n".join(lines)
 
 
+def update_readme_stats(stats: dict, readme_path: Path) -> bool:
+    """Update the statistics table and last-updated line in README.md.
+
+    The function uses regex substitution so the surrounding markdown prose is
+    never touched.  Returns True if the README was modified, False otherwise.
+    """
+    if not readme_path.exists():
+        print(f"  README not found at {readme_path} — skipping README update")
+        return False
+
+    content = readme_path.read_text(encoding='utf-8')
+    original = content
+
+    total = stats['total']
+    mapped = stats['mapped']
+    todo = stats['todo']
+    coverage = f"{round(mapped * 100 / total, 1)}%" if total > 0 else "0%"
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+
+    # Helper: format a number with thousands commas exactly like the table uses.
+    def fmt(n: int) -> str:
+        return f"{n:,}"
+
+    # Update each stat row independently so column padding changes don't matter.
+    replacements = [
+        # Total programs row
+        (
+            r'(\|\s*\*\*Total Bug Bounty Programs\*\*\s*\|\s*)[\d,]+(\s*\|)',
+            rf'\g<1>{fmt(total)}\2'
+        ),
+        # Mapped orgs row
+        (
+            r'(\|\s*\*\*Mapped DockerHub Organizations\*\*\s*\|\s*)[\d,]+(\s*\|)',
+            rf'\g<1>{fmt(mapped)}\2'
+        ),
+        # Coverage row
+        (
+            r'(\|\s*\*\*Coverage\*\*\s*\|\s*)[\d.]+%(\s*\|)',
+            rf'\g<1>{coverage}\2'
+        ),
+        # TODO row
+        (
+            r'(\|\s*\*\*TODO \(Needs Research\)\*\*\s*\|\s*)[\d,]+(\s*\|)',
+            rf'\g<1>{fmt(todo)}\2'
+        ),
+        # Last-updated line — update the date while keeping the rest of the line.
+        (
+            r'_Last automated update:.*?_',
+            f'_Last automated update: {today} UTC_'
+        ),
+    ]
+
+    for pattern, replacement in replacements:
+        content = re.sub(pattern, replacement, content)
+
+    if content == original:
+        print("  README stats unchanged — no update needed")
+        return False
+
+    readme_path.write_text(content, encoding='utf-8')
+    print(f"  README.md stats updated: {fmt(total)} programs, {fmt(mapped)} mapped ({coverage}), {fmt(todo)} TODO")
+    return True
+
+
 def main():
     data_dir = Path(__file__).parent.parent / "dockerhub-orgs-data"
     output_file = Path(__file__).parent.parent / "docs" / "STATISTICS.md"
+    readme_file = Path(__file__).parent.parent / "README.md"
 
     print("Generating statistics report...")
 
@@ -140,6 +207,10 @@ def main():
 
     print(f"✅ Report generated: {output_file}")
     print(f"   Total: {stats['total']}, Mapped: {stats['mapped']}, TODO: {stats['todo']}")
+
+    # Keep README statistics table in sync with live data.
+    print("Updating README.md statistics...")
+    update_readme_stats(stats, readme_file)
 
     return 0
 
