@@ -3,8 +3,9 @@ name: Auto-Discover DockerHub Organizations
 on:
   schedule:
     # Run daily at 05:00 UTC — after the update (02:00) and report (03:00) workflows.
-    # Processes 100 pending programs per day; clears all backlog in ~5 days then
-    # keeps up with daily new additions in real-time.
+    # Processes up to 5000 programs per run; naturally stops when daily API quota
+    # is exhausted and retries remaining programs on the next scheduled run.
+    # All 3000+ programs will be covered even if it takes several days.
     - cron: "0 5 * * *"
   workflow_dispatch:
     inputs:
@@ -45,7 +46,7 @@ jobs:
           # Script exits with error if this secret is not set.
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
-          MAX="${{ github.event.inputs.max_discoveries || 100 }}"
+          MAX="${{ github.event.inputs.max_discoveries || 5000 }}"
 
           # Validate input: must be a positive integer
           if [[ ! "$MAX" =~ ^[0-9]+$ ]] || [ "$MAX" -le 0 ]; then

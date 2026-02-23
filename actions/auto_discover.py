@@ -279,7 +279,7 @@ def update_tsv_files(discoveries: Dict[str, Dict[str, str]]):
 
 
 def main():
-    max_count = 50
+    max_count = 5000
     if len(sys.argv) > 1:
         try:
             max_count = int(sys.argv[1])
@@ -335,6 +335,16 @@ def main():
 
     for idx, (tsv_file, program_url) in enumerate(programs, 1):
         print(f"\n[{idx}/{len(programs)}] " + "-" * 50)
+
+        # Early-exit when all keys are daily-dead — no point iterating thousands
+        # of remaining programs just to print [SKIP] on each one.  They stay as
+        # '?' and tomorrow's scheduled run will pick them up automatically.
+        if _GEMINI_AVAILABLE and not gemini_discover.has_live_keys():
+            remaining = len(programs) - idx + 1
+            print(f"\n[DAILY QUOTA EXHAUSTED] All Gemini keys have hit their daily limit.")
+            print(f"  Processed {idx - 1} programs this run.")
+            print(f"  {remaining} programs remain as '?' and will be retried tomorrow automatically.")
+            break
 
         try:
             dockerhub_url = discover_dockerhub_for_program(program_url)
