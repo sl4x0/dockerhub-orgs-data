@@ -1,12 +1,12 @@
 # DockerHub Organizations Statistics
 
-Last updated: 2026-02-22 (UTC)
+Last updated: 2026-02-23 (UTC)
 
 ## Overview
 
 - **Total Programs**: 3326
-- **Mapped Organizations**: 33
-- **TODO**: 3293
+- **Mapped Organizations**: 34
+- **TODO**: 3292
 - **Not Found**: 0
 - **Coverage**: 1.0%
 
@@ -14,7 +14,7 @@ Last updated: 2026-02-22 (UTC)
 
 ### bugcrowd
 - Total: 211
-- Mapped: 33
+- Mapped: 34
 
 ### chaos
 - Total: 798
@@ -52,6 +52,7 @@ Last updated: 2026-02-22 (UTC)
 - [arlo](https://hub.docker.com/u/arlo)
 - [asana](https://hub.docker.com/u/asana)
 - [atlassian](https://hub.docker.com/u/atlassian)
+- [auth0](https://hub.docker.com/u/auth0)
 - [automationconsultants](https://hub.docker.com/u/automationconsultants)
 - [axisecp](https://hub.docker.com/u/axisecp)
 - [backblaze](https://hub.docker.com/u/backblaze)
