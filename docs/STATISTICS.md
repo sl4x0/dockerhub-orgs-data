@@ -5,16 +5,16 @@ Last updated: 2026-02-24 (UTC)
 ## Overview
 
 - **Total Programs**: 3329
-- **Mapped Organizations**: 91
-- **TODO**: 3238
+- **Mapped Organizations**: 92
+- **TODO**: 3237
 - **Not Found**: 0
-- **Coverage**: 2.7%
+- **Coverage**: 2.8%
 
 ## By Platform
 
 ### bugcrowd
 - Total: 211
-- Mapped: 91
+- Mapped: 92
 
 ### chaos
 - Total: 798
@@ -89,6 +89,7 @@ Last updated: 2026-02-24 (UTC)
 - [etsy](https://hub.docker.com/u/etsy)
 - [fairdom](https://hub.docker.com/u/fairdom)
 - [flourish](https://hub.docker.com/u/flourish)
+- [freemanlab](https://hub.docker.com/u/freemanlab)
 - [fydeinc](https://hub.docker.com/u/fydeinc)
 - [hotdoc](https://hub.docker.com/u/hotdoc)
 - [hyperledger](https://hub.docker.com/u/hyperledger)
