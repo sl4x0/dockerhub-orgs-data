@@ -102,12 +102,14 @@ jobs:
           else
             GONE=$(wc -l < confirmed_missing.txt | tr -d ' ')
             git commit -m "Weekly check: Mark $GONE gone DockerHub org(s) as '-'"
+            git pull --rebase origin main
             git push
             echo "✅ TSV files updated"
           fi
 
       - name: Create or update GitHub issue for missing orgs
         if: steps.check.outputs.missing_count != '0'
+        continue-on-error: true  # labels may not exist yet; don't fail the workflow
         uses: actions/github-script@v7
         with:
           script: |

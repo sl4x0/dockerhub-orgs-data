@@ -92,6 +92,11 @@ jobs:
             echo "📝 Committing $discovered new discoveries"
             git commit -m "Auto-discover DockerHub organizations - Found: $discovered usernames"
 
+            # Pull any commits pushed by other workflows (e.g. report.yml at 06:00 UTC)
+            # that landed while this long-running job was processing programs.
+            # --rebase replays our commit on top cleanly; TSV files sort deterministically
+            # so merge conflicts are extremely unlikely.
+            git pull --rebase origin main
             git push
             echo "✅ Changes pushed successfully"
             echo "no_changes=false" >> $GITHUB_ENV

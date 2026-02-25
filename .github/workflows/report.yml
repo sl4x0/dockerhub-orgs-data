@@ -81,5 +81,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update reports ($(date -u +%Y-%m-%d))"
+            # Rebase in case update.yml or auto-discover.yml pushed while this ran.
+            git pull --rebase origin main
             git push
           fi

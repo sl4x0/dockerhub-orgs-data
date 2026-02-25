@@ -114,12 +114,15 @@ jobs:
 
             git commit -m "Daily update: Fetch latest bug bounty programs - New: $new_programs, Discovered: $discovered"
 
+            # Rebase onto latest main in case another workflow pushed while this job ran.
+            git pull --rebase origin main
             git push
             echo "✅ Changes pushed successfully"
           fi
 
       - name: Create or update issue for missing organizations
         if: hashFiles('missing_orgs.txt') != ''
+        continue-on-error: true  # labels may not exist yet; don't fail the whole workflow
         uses: actions/github-script@v7
         with:
           script: |

@@ -37,13 +37,15 @@ from typing import Dict, List, Optional, Tuple
 
 # Models confirmed available on free-tier keys (as of Feb 2026).
 # Cheapest/fastest first; only escalate when cheaper model is 404.
+# gemini-2.0-flash-lite: 30 RPM / 1500 RPD free — ideal for bulk discovery.
+# gemini-2.0-flash: 15 RPM / 1500 RPD free — fallback.
+# gemini-1.5-flash: widely available, good free quota.
+# gemini-1.5-pro: highest quality, lower quota — last resort.
 MODELS: List[str] = [
-    "gemini-2.5-flash-lite",
-    "gemini-flash-lite-latest",
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
     "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
 ]
 
 # Safety cap: if we have been waiting for throttled keys for longer than
