@@ -115,14 +115,18 @@ jobs:
             git commit -m "Daily update: Fetch latest bug bounty programs - New: $new_programs, Discovered: $discovered"
 
             # Rebase onto latest main in case another workflow pushed while this job ran.
+            # Stash any leftover unstaged/untracked changes (e.g. missing_orgs.txt) so
+            # that `git pull --rebase` does not abort with exit code 128.
+            git stash --include-untracked 2>/dev/null || true
             git pull --rebase origin main
+            git stash pop 2>/dev/null || true
             git push
             echo "✅ Changes pushed successfully"
           fi
 
       - name: Create or update issue for missing organizations
         if: hashFiles('missing_orgs.txt') != ''
-        continue-on-error: true  # labels may not exist yet; don't fail the whole workflow
+        continue-on-error: true # labels may not exist yet; don't fail the whole workflow
         uses: actions/github-script@v7
         with:
           script: |
