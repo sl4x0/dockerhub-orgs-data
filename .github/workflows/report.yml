@@ -82,6 +82,9 @@ jobs:
           else
             git commit -m "Update reports ($(date -u +%Y-%m-%d))"
             # Rebase in case update.yml or auto-discover.yml pushed while this ran.
+            # Stash any untracked files so the rebase doesn't abort with exit code 128.
+            git stash --include-untracked 2>/dev/null || true
             git pull --rebase origin main
+            git stash pop 2>/dev/null || true
             git push
           fi

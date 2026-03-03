@@ -96,7 +96,10 @@ jobs:
             # that landed while this long-running job was processing programs.
             # --rebase replays our commit on top cleanly; TSV files sort deterministically
             # so merge conflicts are extremely unlikely.
+            # Stash untracked files (e.g. discovery_log.txt) so rebase doesn't abort.
+            git stash --include-untracked 2>/dev/null || true
             git pull --rebase origin main
+            git stash pop 2>/dev/null || true
             git push
             echo "✅ Changes pushed successfully"
             echo "no_changes=false" >> $GITHUB_ENV
