@@ -1,12 +1,12 @@
 # DockerHub Organizations Statistics
 
-Last updated: 2026-03-05 (UTC)
+Last updated: 2026-03-06 (UTC)
 
 ## Overview
 
-- **Total Programs**: 3336
+- **Total Programs**: 3337
 - **Mapped Organizations**: 98
-- **TODO**: 3238
+- **TODO**: 3239
 - **Not Found**: 0
 - **Coverage**: 2.9%
 
@@ -29,7 +29,7 @@ Last updated: 2026-03-05 (UTC)
 - Mapped: 0
 
 ### hackerone
-- Total: 235
+- Total: 236
 - Mapped: 0
 
 ### hackerone.external_program
